@@ -6,5 +6,5 @@ package multiplayer;
  *
  */
 public enum UpdateMessages {
-    CHOOSE
+    CLIENT_CONNECTED, OPPONENT
 }
