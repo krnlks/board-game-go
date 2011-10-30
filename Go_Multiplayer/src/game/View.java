@@ -57,7 +57,10 @@ public class View implements Observer{
                         }else{
                             updatePlayingField();
                             updateScorePanel();
+                            //TODO Irgendwie beißen sich GUI calls und blockierendes send/receive !
+                            waiting.setVisible(true);
                             model.send((fb.y*9) + fb.x); //something in [0,80]
+                            model.receive();
                         }
                     }else{
                         JOptionPane.showMessageDialog(goWindow, "Das wäre Selbstmord!");
@@ -156,6 +159,7 @@ public class View implements Observer{
     
     public View(Model model){
         this.model = model;
+        this.model.addObserver(this);
         init();
         choose.setVisible(true);
     }
@@ -267,6 +271,7 @@ public class View implements Observer{
             public void actionPerformed(ActionEvent e) {
                 model.setLAN_Role(server_addr.getText());
                 if (model.estbl_LanComm() == 0){
+                    System.out.println("estbl_LanComm successful");
                     choose.dispose();
                 }else{
                     server_addr.setText("");
@@ -336,13 +341,18 @@ public class View implements Observer{
 
     @Override
     public void update(Observable arg0, Object arg1) {
-        System.out.println("dedöt");
-        if (arg1.equals(UpdateMessages.CHOOSE)){
+        if (arg1.equals(UpdateMessages.CLIENT_CONNECTED)){
+            System.out.println("View: Going to dispose choose and make waiting visible");
             choose.dispose();
-            waiting.setVisible(true);
-        }else{
-            System.out.println("dedöt");
+            System.out.println("disposed choose");
+            //TODO Warum funzt folgende Zeile nicht?
+//            waiting.setVisible(true);
+        }else if (arg1.equals(UpdateMessages.OPPONENT)){
+            waiting.setVisible(false);
+            updatePlayingField();
+            updateScorePanel();
         }
+        System.out.println("what");
     }
 
 }//View

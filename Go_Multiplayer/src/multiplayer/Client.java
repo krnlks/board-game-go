@@ -18,18 +18,20 @@ public class Client extends LAN_Conn{
     }
     
     public void run(){
-        try {
-            init();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            init();
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
     
     public void send(int b) throws IOException {
+        System.out.println("Client: Sende Zug...");
         // Senden der Nachricht ueber einen Stream
         socket.getOutputStream().write(b);
+        System.out.println("Client: Zug gesendet");
     }
     
     public int receive() throws IOException {
@@ -43,7 +45,7 @@ public class Client extends LAN_Conn{
         return stream.read();
     }
     
-    public void init() throws UnknownHostException, IOException {
+    public void init() throws Exception {
         // Erzeugen der Socket und Aufbau der Verbindung
         socket = new Socket(server_addr, SERVER_PORT);
         System.out.println("Verbunden mit Server: "

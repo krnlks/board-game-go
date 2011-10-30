@@ -28,7 +28,7 @@ public abstract class LAN_Conn extends Thread {
      * establishes the LAN connection
      * @throws IOException
      */
-    public abstract void init() throws IOException;
+    public abstract void init() throws Exception;
     /**
      * @throws IOException
      */

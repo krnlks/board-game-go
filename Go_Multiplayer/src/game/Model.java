@@ -1,10 +1,12 @@
 package game;
 
+import java.io.IOException;
 import java.util.Observable;
 
 import multiplayer.Client;
 import multiplayer.LAN_Conn;
 import multiplayer.Server;
+import multiplayer.UpdateMessages;
 
 /* verbesserungswürdig:
  * - isNoSuicide (schleifen)
@@ -51,18 +53,34 @@ public class Model extends Observable{
 	}
 	
 	public void send(int b){
-//	    lan.send(b);
-	    
-	    setChanged();
-        notifyObservers();
+	    try {
+	        System.out.println("Model: Sende Zug...");
+            lan.send(b); 
+            System.out.println("Model: Zug gesendet");
+	    } catch (IOException e) {
+	        // TODO Auto-generated catch block
+	        e.printStackTrace();
+	    }
 	}
 	
 	public void receive(){
-//	    int recv = lan.receive();
-	    
-	    
-	    setChanged();
-	    notifyObservers();
+	    try {
+	        System.out.println("Model: call to receive");
+            int recv = lan.receive();
+            System.out.println("Model: return from receive");
+            if (recv == -1){
+                //TODO gegn. Pass lokal ausführen
+            }else{
+                int y = recv / 9;
+                int x = recv - 9*y;
+                this.processMove(y, x);
+            }
+            setChanged();
+            notifyObservers(UpdateMessages.OPPONENT);
+	    } catch (IOException e) {
+	        // TODO Auto-generated catch block
+	        e.printStackTrace();
+	    }
 	}
 	
     /**
@@ -72,6 +90,7 @@ public class Model extends Observable{
      */
     public int estbl_LanComm() {
         try{
+            this.lan.init();
             this.lan.start();
             return 0;
         }catch (Exception e) {
@@ -87,10 +106,10 @@ public class Model extends Observable{
 	public void setLAN_Role(String server_address){
 	    if (server_address.equals("")){
 	        this.lan = new Server(this);
-	        this.player = Player.BLACK;
+	        this.player = Player.WHITE;
 	    }else{
 	        this.lan = new Client(this, server_address);
-	        this.player = Player.WHITE;
+	        this.player = Player.BLACK;
 	    }
 	}
 	
@@ -301,7 +320,7 @@ public class Model extends Observable{
 	//the method for test on "ko"
 	//and for actually executing the move
 	//returns the field in its state after the preceding move
-    public void processMove(int i, int j) {
+    public void processMove(int y, int x) {
     																	//save state of prisoners for eventual undoing
     
 		this.pris_W_b4 = this.pris_W;
@@ -312,9 +331,9 @@ public class Model extends Observable{
 		}
 		
         cpyField(fields, fields_b4);									//save state of the fields for eventual undoing
-        fields[i][j] = getCurrentPlayer();										//put player's stone on empty intersection
+        fields[y][x] = getCurrentPlayer();										//put player's stone on empty intersection
         int [][] lookField = new int [9][9];
-        lookAround(i, j, i, j, getCurrentPlayer(), lookField);					//search for opponent regions to be removed							
+        lookAround(y, x, y, x, getCurrentPlayer(), lookField);					//search for opponent regions to be removed							
         gamecnt++;														//game counter is set to next player's turn
     }// processMove
     
@@ -464,7 +483,10 @@ public class Model extends Observable{
 
     public void setChanged1() {
         setChanged();
-        notifyObservers();
+    }
+    
+    public void notifyObservers2(Object updateMessage){
+        notifyObservers(updateMessage);
     }
 	
 

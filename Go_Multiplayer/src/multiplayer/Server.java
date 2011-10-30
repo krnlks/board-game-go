@@ -20,13 +20,14 @@ public class Server extends LAN_Conn{
     
     public void run() {
         try {
-            init();
             System.out.println("after init");
             client = socket.accept();
-            System.out.println("server: accepted!");
+            System.out.println("server: Client accepted!");
             model.setChanged1();
-            model.notifyObservers(UpdateMessages.CHOOSE);
+            System.out.println("a");
+            model.notifyObservers2(UpdateMessages.CLIENT_CONNECTED);
             System.out.println("view notified (choose)");
+            model.receive();
             synchronized (this) {
                 try {
                     wait();
@@ -47,8 +48,10 @@ public class Server extends LAN_Conn{
         // Datenstrom zum Lesen verwenden
         InputStream stream = client.getInputStream();
 
+        System.out.println("server: data available...?");
         // Sind Daten verfügbar?
         while (stream.available() == 0);
+        System.out.println("server: data available!");
 
         // Ankommende Daten lesen und ausgeben
         return stream.read();
