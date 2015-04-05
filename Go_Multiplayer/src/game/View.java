@@ -52,18 +52,18 @@ public class View implements Observer{
                     if (model.isNoSuicide(fb.y, fb.x) ){
                         model.processMove(fb.y, fb.x);
                         if ( (model.areEqualFields(model.getFields(), model.getTmp_4_ko())) && (model.getGamecnt() > 8) ){
-                            JOptionPane.showMessageDialog(goWindow, "Ein Stein, der gerade einen Stein geschlagen hat, darf nicht sofort zurückgeschlagen werden!");
+                            JOptionPane.showMessageDialog(goWindow, "Ein Stein, der gerade einen Stein geschlagen hat, darf nicht sofort zurï¿½ckgeschlagen werden!");
                             model.undoMove();
                         }else{
                             updatePlayingField();
                             updateScorePanel();
-                            //TODO Irgendwie beißen sich GUI calls und blockierendes send/receive !
+                            //TODO Irgendwie beiï¿½en sich GUI calls und blockierendes send/receive !
                             waiting.setVisible(true);
                             model.send((fb.y*9) + fb.x); //something in [0,80]
                             model.receive();
                         }
                     }else{
-                        JOptionPane.showMessageDialog(goWindow, "Das wäre Selbstmord!");
+                        JOptionPane.showMessageDialog(goWindow, "Das wï¿½re Selbstmord!");
                     }
                 }else{
                     JOptionPane.showMessageDialog(goWindow, "Bitte auf ein freies Feld setzen!");
@@ -91,7 +91,7 @@ public class View implements Observer{
                     if (scrB > scrW){
                         result = String.format("Schwarz gewinnt mit %d zu %d Punkten!", scrB, scrW);
                     }else if (scrW > scrB){
-                        result = String.format("Weiß gewinnt mit %d zu %d Punkten!", scrW, scrB);
+                        result = String.format("Weiï¿½ gewinnt mit %d zu %d Punkten!", scrW, scrB);
                     }else{
                         result = String.format("Das Spiel endet unentschieden mit %d zu %d Punkten!", scrW, scrB);
                     }
@@ -109,14 +109,14 @@ public class View implements Observer{
         public void actionPerformed(ActionEvent e) {
             if (model.getGamecnt() > 1){
                 if (model.areEqualFields(model.getFields(), model.getFields_b4())){
-                	JOptionPane.showMessageDialog(goWindow, "Es darf nur ein Zug zurückgenommen werden!");
+                	JOptionPane.showMessageDialog(goWindow, "Es darf nur ein Zug zurï¿½ckgenommen werden!");
                 }else{
                 	model.undoMove();
                 	updatePlayingField();
                 	updateScorePanel();                                                        
                 }
             }else{
-                JOptionPane.showMessageDialog(goWindow, "Es gibt keinen Zug, der zurückgenommen werden kann!");
+                JOptionPane.showMessageDialog(goWindow, "Es gibt keinen Zug, der zurï¿½ckgenommen werden kann!");
             }
         }//actionPerformed
     }//UndoButtonActionListener
@@ -201,7 +201,7 @@ public class View implements Observer{
                 phase = new JLabel(blackTurn);
                 pass = new JButton("Passen");
                 pass.addActionListener( new PassButtonActionListener() );
-                undo = new JButton("Zug zurücknehmen");
+                undo = new JButton("Zug zurï¿½cknehmen");
                 undo.addActionListener( new UndoButtonActionListener() );
                 
             
@@ -265,7 +265,7 @@ public class View implements Observer{
         join = new JLabel("Join:");
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
-        server_addr.setText("86.50.75.223");  //TODO: remove this line at the end
+        server_addr.setText("192.168.178.21");  //TODO: remove this line at the end
         conn_info_client = new JLabel("");
         server_addr.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {

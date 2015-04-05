@@ -18,6 +18,9 @@ public class Server extends LAN_Conn{
         this.model = model;
     }
     
+    /**
+     * Der Server wartet auf Verbindungen von Clients (accept)
+     */
     public void run() {
         try {
             System.out.println("after init");
@@ -49,7 +52,7 @@ public class Server extends LAN_Conn{
         InputStream stream = client.getInputStream();
 
         System.out.println("server: data available...?");
-        // Sind Daten verfügbar?
+        // Sind Daten verfuegbar?
         while (stream.available() == 0);
         System.out.println("server: data available!");
 
@@ -57,23 +60,19 @@ public class Server extends LAN_Conn{
         return stream.read();
     }
 
+    /**
+     * Erzeugen des Sockets (binden an Port)
+     * @throws IOException
+     */
     public void init() throws IOException {
-        // Erzeugen der Socket/binden an Port/Wartestellung
         socket = new ServerSocket(SERVER_PORT);
-        // Ab hier ist der Server "scharf" geschaltet
-        // und wartet auf Verbindungen von Clients
-        // System.out.println("Warten auf Verbindungen ...");
-
-        // im Aufruf der Methode accept() verharrt die
-        // Server-Anwendung solange, bis eine Verbindungs-
-        // anforderung eines Client eingegangen ist.
-        // Ist dies der Fall, so wird die Anforderung akzeptiert
     }
     
+    /**
+     * Verbindung beenden und ServerSocket schlieÃŸen
+     */
     public void terminate() throws IOException{
-        // Verbindung beenden
         client.close();
-        // Server-Socket schließen
         socket.close();
     }
 }
