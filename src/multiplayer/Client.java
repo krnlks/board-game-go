@@ -46,9 +46,10 @@ public class Client extends LAN_Conn{
     }
     
     public void init() throws Exception {
-        // Erzeugen der Socket und Aufbau der Verbindung
+    	System.out.println("The client\n----------\n");
+    	// Erzeugen des Socket und Aufbau der Verbindung
         socket = new Socket(server_addr, SERVER_PORT);
-        System.out.println("Verbunden mit Server: "
+        System.out.println("Client: Verbunden mit Server: "
                 + socket.getRemoteSocketAddress());
     }
 

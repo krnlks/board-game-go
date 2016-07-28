@@ -8,7 +8,7 @@ import multiplayer.LAN_Conn;
 import multiplayer.Server;
 import multiplayer.UpdateMessages;
 
-/* verbesserungswürdig:
+/* Verbesserungsideen:
  * - isNoSuicide (schleifen)
  * - globale variablen
  * - markRegion() gibt wahr/falsch zurück -> tut nicht das, was man erwarten würde
@@ -84,7 +84,7 @@ public class Model extends Observable{
 	}
 	
     /**
-     * starts the {@link LAN_Conn} and thereby establishes the LAN connection 
+     * Starts the {@link LAN_Conn} and thereby establishes the LAN connection 
      * @return 0 in case of success; -1 if an IOException has occurred
      * and re-initialization is necessary
      */
@@ -99,9 +99,9 @@ public class Model extends Observable{
     }   
 	
 	/**
-	 * Sets the player color and the server address<br>
-	 * @param server_address the address of the related server if this is
-	 * the client; empty string if this is the server
+	 * Creates a {@link Server} or a {@link Client} depending on {@code server_address} and assigns it to {@code lan}. Also sets {@code player}
+	 * @param server_address empty string if this shall be the server,
+	 * or the address of the remote server if this shall be the client
 	 */
 	public void setLAN_Role(String server_address){
 	    if (server_address.equals("")){

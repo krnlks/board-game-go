@@ -9,6 +9,10 @@ import javax.swing.*;
 
 import multiplayer.UpdateMessages;
 
+/* Verbesserungsideen:
+ * - teilweise werden hier Model-Methoden direkt aufgerufen, z.b. if (model.estbl_LanComm() == 0){ ... 
+ */
+
 public class View implements Observer{
     
     private class FieldButton extends JButton{
@@ -28,7 +32,7 @@ public class View implements Observer{
     private class GoWindowListener implements WindowListener{
         public void windowClosing(WindowEvent e) {
             //TODO: Sende Quit an Gegenspieler
-            goWindow.dispose();
+            gameWindow.dispose();
         }
         public void windowActivated(WindowEvent e) {
         }
@@ -52,7 +56,7 @@ public class View implements Observer{
                     if (model.isNoSuicide(fb.y, fb.x) ){
                         model.processMove(fb.y, fb.x);
                         if ( (model.areEqualFields(model.getFields(), model.getTmp_4_ko())) && (model.getGamecnt() > 8) ){
-                            JOptionPane.showMessageDialog(goWindow, "Ein Stein, der gerade einen Stein geschlagen hat, darf nicht sofort zur�ckgeschlagen werden!");
+                            JOptionPane.showMessageDialog(gameWindow, "Ein Stein, der gerade einen Stein geschlagen hat, darf nicht sofort zurueckgeschlagen werden!");
                             model.undoMove();
                         }else{
                             updatePlayingField();
@@ -63,13 +67,13 @@ public class View implements Observer{
                             model.receive();
                         }
                     }else{
-                        JOptionPane.showMessageDialog(goWindow, "Das w�re Selbstmord!");
+                        JOptionPane.showMessageDialog(gameWindow, "Das waere Selbstmord!");
                     }
                 }else{
-                    JOptionPane.showMessageDialog(goWindow, "Bitte auf ein freies Feld setzen!");
+                    JOptionPane.showMessageDialog(gameWindow, "Bitte auf ein freies Feld setzen!");
                 }
             }else{
-                JOptionPane.showMessageDialog(goWindow, "Bitte warten Sie bis Sie an der Reihe sind.");
+                JOptionPane.showMessageDialog(gameWindow, "Bitte warten Sie bis Sie an der Reihe sind.");
             }
         }//actionPerformed
     }//FieldButtonActionListener
@@ -91,16 +95,16 @@ public class View implements Observer{
                     if (scrB > scrW){
                         result = String.format("Schwarz gewinnt mit %d zu %d Punkten!", scrB, scrW);
                     }else if (scrW > scrB){
-                        result = String.format("Wei� gewinnt mit %d zu %d Punkten!", scrW, scrB);
+                        result = String.format("Weiss gewinnt mit %d zu %d Punkten!", scrW, scrB);
                     }else{
                         result = String.format("Das Spiel endet unentschieden mit %d zu %d Punkten!", scrW, scrB);
                     }
-                    JOptionPane.showMessageDialog(goWindow, result);
+                    JOptionPane.showMessageDialog(gameWindow, result);
                     model.send(-1);
-                    goWindow.dispose();
+                    gameWindow.dispose();
                 }
             }else{
-                JOptionPane.showMessageDialog(goWindow, "Bitte warten Sie bis Sie an der Reihe sind.\n");
+                JOptionPane.showMessageDialog(gameWindow, "Bitte warten Sie bis Sie an der Reihe sind.\n");
             }
         }//actionPerformed
     }//PassButtonActionListener
@@ -109,14 +113,14 @@ public class View implements Observer{
         public void actionPerformed(ActionEvent e) {
             if (model.getGamecnt() > 1){
                 if (model.areEqualFields(model.getFields(), model.getFields_b4())){
-                	JOptionPane.showMessageDialog(goWindow, "Es darf nur ein Zug zur�ckgenommen werden!");
+                	JOptionPane.showMessageDialog(gameWindow, "Es darf nur ein Zug zurueckgenommen werden!");
                 }else{
                 	model.undoMove();
                 	updatePlayingField();
                 	updateScorePanel();                                                        
                 }
             }else{
-                JOptionPane.showMessageDialog(goWindow, "Es gibt keinen Zug, der zur�ckgenommen werden kann!");
+                JOptionPane.showMessageDialog(gameWindow, "Es gibt keinen Zug, der zurueckgenommen werden kann!");
             }
         }//actionPerformed
     }//UndoButtonActionListener
@@ -135,7 +139,7 @@ public class View implements Observer{
     JLabel conn_info_client;
     JDialog waiting;
     
-    JFrame goWindow;
+    JFrame gameWindow;
     JSplitPane splitPane;
     
     JPanel playingField;
@@ -165,10 +169,10 @@ public class View implements Observer{
     }
     
     /**
-     * creates and initializes all the Go-GUI components
+     * Creates and initializes all the UI components
      */
     private void init(){
-        goWindow = new JFrame("Go");
+        gameWindow = new JFrame("Go");
         splitPane = new JSplitPane (JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setDividerSize(0);
         
@@ -201,23 +205,23 @@ public class View implements Observer{
                 phase = new JLabel(blackTurn);
                 pass = new JButton("Passen");
                 pass.addActionListener( new PassButtonActionListener() );
-                undo = new JButton("Zug zur�cknehmen");
+                undo = new JButton("Zug zuruecknehmen");
                 undo.addActionListener( new UndoButtonActionListener() );
                 
             
             scorePanel.add(new JLabel());           //upper left corner of the scorePanel is empty
-            scorePanel.add(new JLabel("Black"));
-            scorePanel.add(new JLabel("White"));
+            scorePanel.add(new JLabel("Schwarz"));
+            scorePanel.add(new JLabel("Weiss"));
             
-            scorePanel.add(new JLabel("T"));
+            scorePanel.add(new JLabel("Gebiet"));
             scorePanel.add(ter_B);
             scorePanel.add(ter_W);
             
-            scorePanel.add(new JLabel("P"));
+            scorePanel.add(new JLabel("Gefangene"));
             scorePanel.add(pris_B);
             scorePanel.add(pris_W);
             
-            scorePanel.add(new JLabel("S"));
+            scorePanel.add(new JLabel("Punkte"));
             scorePanel.add(scr_B);
             scorePanel.add(scr_W);
             
@@ -226,14 +230,14 @@ public class View implements Observer{
             scorePanel.add(undo);
         splitPane.add(scorePanel);
         
-        goWindow.add(splitPane);
-        goWindow.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        goWindow.setSize(1350, 730);
-        goWindow.setResizable(false);
-        goWindow.addWindowListener(new GoWindowListener());
-        goWindow.setVisible(true);
+        gameWindow.add(splitPane);
+        gameWindow.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        gameWindow.setSize(1350, 730);
+        gameWindow.setResizable(false);
+        gameWindow.addWindowListener(new GoWindowListener());
+        gameWindow.setVisible(true);
         
-        waiting = new JDialog(goWindow, true);
+        waiting = new JDialog(gameWindow, true);
         waiting.add(new JLabel("Waiting for opponent...", SwingConstants.CENTER));
         waiting.setSize(200, 100);
         waiting.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -242,7 +246,7 @@ public class View implements Observer{
     }
     
     /**
-     * creates a JDialog to choose for either host or join
+     * Creates a JDialog to choose for either host or join
      */
     private void hostOrJoin() {
         GridLayout gl1 = new GridLayout(3, 1);
@@ -250,28 +254,31 @@ public class View implements Observer{
         JPanel jp1 = new JPanel(gl2);
         JPanel jp2 = new JPanel(gl2);
         JPanel jp3 = new JPanel(gl2);
-        this.choose = new JDialog(goWindow, true);
+        this.choose = new JDialog(gameWindow, true);
         choose.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         choose.setLayout(gl1);
-        host = new JButton("Host");
+        host = new JButton("Host (Weiss)");
         conn_info_host = new JLabel("");
         host.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                conn_info_host.setText("Waiting..."); //TODO: guess i have to work with an extra thread for LAN_Conn for updating this etc
+                conn_info_host.setText("Waiting..."); //TODO: guess I have to work with an extra thread for LAN_Conn for updating this etc
                 model.setLAN_Role("");
-                model.estbl_LanComm();
+                if (model.estbl_LanComm() != 0){
+                	System.out.println("View: Starting server failed");
+                    System.exit(1);
+                }
             }
         });
-        join = new JLabel("Join:");
+        join = new JLabel("Join (Schwarz):");
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
-        server_addr.setText("192.168.178.21");  //TODO: remove this line at the end
+        server_addr.setText("192.168.178.25");  //TODO: remove this line at the end
         conn_info_client = new JLabel("");
         server_addr.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 model.setLAN_Role(server_addr.getText());
                 if (model.estbl_LanComm() == 0){
-                    System.out.println("estbl_LanComm successful");
+                	System.out.println("View: estbl_LanComm successful");
                     choose.dispose();
                 }else{
                     server_addr.setText("");
@@ -291,7 +298,7 @@ public class View implements Observer{
         choose.add(jp3);
         
         choose.pack();
-        choose.setSize(200, 100);
+        //choose.setSize(200, 100);
         choose.setResizable(false);
         choose.addWindowFocusListener(new WindowAdapter() {
             public void windowGainedFocus(WindowEvent e) {
@@ -344,15 +351,16 @@ public class View implements Observer{
         if (arg1.equals(UpdateMessages.CLIENT_CONNECTED)){
             System.out.println("View: Going to dispose choose and make waiting visible");
             choose.dispose();
-            System.out.println("disposed choose");
+            System.out.println("View: disposed choose");
             //TODO Warum funzt folgende Zeile nicht?
 //            waiting.setVisible(true);
         }else if (arg1.equals(UpdateMessages.OPPONENT)){
             waiting.setVisible(false);
             updatePlayingField();
             updateScorePanel();
+        }else{
+        	System.out.println("View: what");
         }
-        System.out.println("what");
     }
 
 }//View

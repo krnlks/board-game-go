@@ -5,7 +5,7 @@ import game.Model;
 import java.io.IOException;
 
 /**
- * interface which represents the lan connection and which is
+ * Interface which represents the LAN connection and which is
  * to be implemented e.g. by a server/client 
  * @author Lukas Kern
  */
