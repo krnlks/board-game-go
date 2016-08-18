@@ -6,55 +6,58 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
 
+/**
+ * @author Lukas Kern
+ */
 public class Client extends LAN_Conn{
-    // Port der Serveranwendung
-    public static final int SERVER_PORT = 10001;
     private String server_addr;
     private Socket socket;
     
     public Client(Model model, String server_addr){
         this.server_addr = server_addr;
         this.model = model;
-    }
+    }//Client constructor
     
-    public void run(){
-//        try {
-//            init();
-//        } catch (UnknownHostException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-    }
-    
+    public void run(){}
+
+    /**
+     * Sends a draw via a stream
+     */
     public void send(int b) throws IOException {
-        System.out.println("Client: Sende Zug...");
-        // Senden der Nachricht ueber einen Stream
+        System.out.println("Client: send: Going to send draw...");
         socket.getOutputStream().write(b);
-        System.out.println("Client: Zug gesendet");
+        System.out.println("Client: send: Sent draw");
     }
     
+    /**
+     * Receives a draw via a stream  
+     */
     public int receive() throws IOException {
-        // Datenstrom zum Lesen verwenden
+        //Use stream for reading
         InputStream stream = socket.getInputStream();
         
-        // Sind Daten verfügbar?
+        //Is data available?
         while (stream.available() == 0);
         
-        // Ankommende Daten lesen und ausgeben
+        //Read and return incoming data
         return stream.read();
     }
     
+    /**
+     * Creates the {@code socket} and connects it to {@code SERVER_PORT} on host with address {@code server_addr}
+     * @throws IOException
+     */
     public void init() throws Exception {
-    	System.out.println("The client\n----------\n");
-    	// Erzeugen des Socket und Aufbau der Verbindung
-        socket = new Socket(server_addr, SERVER_PORT);
-        System.out.println("Client: Verbunden mit Server: "
+    	System.out.println("The client (Black)\n------------------\n");
+        socket = new Socket(server_addr, Server.SERVER_PORT);
+        System.out.println("Client: init: Connected to server: "
                 + socket.getRemoteSocketAddress());
-    }
+    }//init
 
+    /**
+     * Closes the {@code socket}
+     */
     public void terminate() throws IOException {
-        // Beenden der Kommunikationsverbindung
         socket.close();
     }
 }

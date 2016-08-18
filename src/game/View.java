@@ -19,8 +19,8 @@ public class View implements Observer{
         
         private static final long serialVersionUID = 1L;
         
-        int y;     //position in the fieldButtons[][]
-        int x;     //position in the fieldButtons[][]
+        int y;     //Position in the fieldButtons[][]
+        int x;     //Position in the fieldButtons[][]
         
         public FieldButton(Icon icon, int y, int x) {
             super(icon);
@@ -29,9 +29,9 @@ public class View implements Observer{
         }//FieldButton constructor
     }//FieldButton
 
-    private class GoWindowListener implements WindowListener{
+    private class GameWindowListener implements WindowListener{
         public void windowClosing(WindowEvent e) {
-            //TODO: Sende Quit an Gegenspieler
+            //TODO Send Quit to opponent
             gameWindow.dispose();
         }
         public void windowActivated(WindowEvent e) {
@@ -46,7 +46,7 @@ public class View implements Observer{
         }
         public void windowOpened(WindowEvent e) {
         }
-    }
+    }//GameWindowListener
     
     private class FieldButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
@@ -59,12 +59,28 @@ public class View implements Observer{
                             JOptionPane.showMessageDialog(gameWindow, "Ein Stein, der gerade einen Stein geschlagen hat, darf nicht sofort zurueckgeschlagen werden!");
                             model.undoMove();
                         }else{
-                            updatePlayingField();
-                            updateScorePanel();
-                            //TODO Irgendwie beiï¿½en sich GUI calls und blockierendes send/receive !
-                            waiting.setVisible(true);
+                        	updatePlayingField();
+                        	updateScorePanel();
+                            System.out.println("View: FBAL: Updated score panel.");
+                            printThreadInfo(); //Is event dispatch thread? (yes)
+                            System.out.println("View: FBAL: Going to send draw to opponent...");
                             model.send((fb.y*9) + fb.x); //something in [0,80]
-                            model.receive();
+                            System.out.println("View: FBAL: Sent draw to opponent.");
+                            System.out.println("View: FBAL: Going to wait for opponent's draw...");
+							//Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
+                            //makes his draw.
+                            SwingWorker worker = new SwingWorker(){
+								@Override
+								protected Object doInBackground() throws Exception {
+									model.receive();
+									return null;
+								}
+                            };
+                            worker.execute();
+                            //Meant to hinder player from entering input until it's his turn again
+                            //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
+                            //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
+                            waiting.setVisible(true); 
                         }
                     }else{
                         JOptionPane.showMessageDialog(gameWindow, "Das waere Selbstmord!");
@@ -133,7 +149,7 @@ public class View implements Observer{
     
     JDialog choose; //choose: host or join
     JButton host;
-    JLabel join;
+    JButton join;
     JTextField server_addr;
     JLabel conn_info_host;
     JLabel conn_info_client;
@@ -166,7 +182,12 @@ public class View implements Observer{
         this.model.addObserver(this);
         init();
         choose.setVisible(true);
-    }
+    }//View constructor
+    
+    private void printThreadInfo(){
+    	System.out.println("View: Thread: " + Thread.currentThread().getName() + ". Event dispatch thread: " + 
+    			javax.swing.SwingUtilities.isEventDispatchThread());
+    }//printThreadInfo
     
     /**
      * Creates and initializes all the UI components
@@ -194,8 +215,6 @@ public class View implements Observer{
             scorePanel = new JPanel();
             scorePanel.setLayout( new GridLayout (5,3) );
             
-            
-         
                 ter_B = new JLabel();
                 ter_W = new JLabel();
                 pris_B = new JLabel();
@@ -207,9 +226,8 @@ public class View implements Observer{
                 pass.addActionListener( new PassButtonActionListener() );
                 undo = new JButton("Zug zuruecknehmen");
                 undo.addActionListener( new UndoButtonActionListener() );
-                
             
-            scorePanel.add(new JLabel());           //upper left corner of the scorePanel is empty
+            scorePanel.add(new JLabel());           //Upper left corner of the scorePanel is empty
             scorePanel.add(new JLabel("Schwarz"));
             scorePanel.add(new JLabel("Weiss"));
             
@@ -228,13 +246,14 @@ public class View implements Observer{
             scorePanel.add(phase);           //lower left corner of the scorePanel is empty
             scorePanel.add(pass);
             scorePanel.add(undo);
+            
         splitPane.add(scorePanel);
         
         gameWindow.add(splitPane);
         gameWindow.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         gameWindow.setSize(1350, 730);
         gameWindow.setResizable(false);
-        gameWindow.addWindowListener(new GoWindowListener());
+        gameWindow.addWindowListener(new GameWindowListener());
         gameWindow.setVisible(true);
         
         waiting = new JDialog(gameWindow, true);
@@ -243,7 +262,7 @@ public class View implements Observer{
         waiting.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         
         hostOrJoin();
-    }
+    }//init
     
     /**
      * Creates a JDialog to choose for either host or join
@@ -261,32 +280,35 @@ public class View implements Observer{
         conn_info_host = new JLabel("");
         host.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                conn_info_host.setText("Waiting..."); //TODO: guess I have to work with an extra thread for LAN_Conn for updating this etc
+            	gameWindow.setTitle("Go - Weiß");
+                conn_info_host.setText("Waiting..."); //TODO Guess I have to work with an extra thread for LAN_Conn for updating this etc
                 model.setLAN_Role("");
-                if (model.estbl_LanComm() != 0){
-                	System.out.println("View: Starting server failed");
+                if (model.estbl_LanConn() != 0){
+                	System.out.println("View: hostOrJoin: Starting server failed");
                     System.exit(1);
                 }
             }
         });
-        join = new JLabel("Join (Schwarz):");
+        join = new JButton("Join (Schwarz):");
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
-        server_addr.setText("192.168.178.25");  //TODO: remove this line at the end
+        server_addr.setText("192.168.178.25");  //TODO Remove this line at the end
         conn_info_client = new JLabel("");
-        server_addr.addActionListener(new ActionListener() {
+        ActionListener srvAddrList = new ActionListener() { //Create a listener for the server address
             public void actionPerformed(ActionEvent e) {
+                gameWindow.setTitle("Go - Schwarz");
                 model.setLAN_Role(server_addr.getText());
-                if (model.estbl_LanComm() == 0){
-                	System.out.println("View: estbl_LanComm successful");
+                if (model.estbl_LanConn() == 0){
+                    System.out.println("View: hostOrJoin: estbl_LanConn() successful");
                     choose.dispose();
                 }else{
                     server_addr.setText("");
                     conn_info_client.setText("Invalid Host");
                 }
             }
-        });
-        
+        }; 
+        server_addr.addActionListener(srvAddrList); //Add the listener both to the text field containing the address
+        join.addActionListener(srvAddrList); //and to the button
         jp1.add(host);
         jp1.add(conn_info_host);
         choose.add(jp1);
@@ -305,7 +327,7 @@ public class View implements Observer{
                 server_addr.requestFocusInWindow();
             }
         });
-    }
+    }//hostOrJoin
 
     public ImageIcon getFieldButtonIcon(int i, int j){
         IS buf = model.getIntersection(i, j);
@@ -342,25 +364,24 @@ public class View implements Observer{
         }else{
             phase.setText(blackTurn);
         }//if
-        
-        
     }//updateScorePanel
 
     @Override
     public void update(Observable arg0, Object arg1) {
         if (arg1.equals(UpdateMessages.CLIENT_CONNECTED)){
-            System.out.println("View: Going to dispose choose and make waiting visible");
+            System.out.println("View: update: Going to dispose choose and make waiting visible");
             choose.dispose();
-            System.out.println("View: disposed choose");
-            //TODO Warum funzt folgende Zeile nicht?
-//            waiting.setVisible(true);
+            System.out.println("View: update: Disposed choose");
+            System.out.println("View: update: " + Thread.currentThread().getName() + ". Event dispatch thread: " + 
+                    javax.swing.SwingUtilities.isEventDispatchThread());
+            waiting.setVisible(true);
         }else if (arg1.equals(UpdateMessages.OPPONENT)){
             waiting.setVisible(false);
             updatePlayingField();
             updateScorePanel();
         }else{
-        	System.out.println("View: what");
+        	System.out.println("View: update: What.");
         }
-    }
+    }//update
 
 }//View

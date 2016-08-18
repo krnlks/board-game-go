@@ -1,9 +1,7 @@
 package multiplayer;
 
 /**
- * 
- * Konstanten, die für eine bestimmte Art der Aenderung im Observable stehen
- *
+ * Constants that indicate a certain change in the {@link java.util.Observable}, i.e. in the Model
  */
 public enum UpdateMessages {
     CLIENT_CONNECTED, OPPONENT

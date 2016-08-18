@@ -10,39 +10,39 @@ import multiplayer.UpdateMessages;
 
 /* Verbesserungsideen:
  * - isNoSuicide (schleifen)
- * - globale variablen
+ * - Globale variablen
  * - markRegion() gibt wahr/falsch zurück -> tut nicht das, was man erwarten würde
- * - der rückgabewert von markregion wird nie verwendet -> legal, diesen für rekursion zu "missbrauchen"?
- * - rekursionen können bestimmt noch zusammengefasst werden
+ * - Der rückgabewert von markRegion wird nie verwendet -> legal, diesen für rekursion zu "missbrauchen"?
+ * - Rekursionen können bestimmt noch zusammengefasst werden
  */
 
 
 public class Model extends Observable{
     
     private LAN_Conn lan;       //Server or client
-    private Player player;         //am I black or white?
-    private int ter_B;                    //territory occupied by Black
-    private int ter_W;                    //territory occupied by White
-    private int pris_B = 0;                    //conquered opponent stones of Black
-    private int pris_W = 0;                    //conquered opponent stones of White
+    private Player player;         //Am I black or white?
+    private int ter_B;                    //Territory occupied by Black
+    private int ter_W;                    //Territory occupied by White
+    private int pris_B = 0;                    //Conquered opponent stones of Black
+    private int pris_W = 0;                    //Conquered opponent stones of White
     private int pris_B_b4 = pris_B;
     private int pris_W_b4 = pris_W;
     
 	private int gamecnt;
-	private IS[][] fields;					//the state of the field
-	private IS[][] fields_b4;			 	//the state preceding state of the field 
-	private IS[][] tmp_4_ko;				//saves the state of fields_b4 while testing on illegal move in "ko"-situation
+	private IS[][] fields;					//The state of the field
+	private IS[][] fields_b4;			 	//The state preceding state of the field 
+	private IS[][] tmp_4_ko;				//Saves the state of fields_b4 while testing on illegal move in "ko"-situation
 	int[][] fieldCpy;
 	boolean blackRegion;
 	boolean whiteRegion;
-	int currentRegion = 0;							  //how many different regions exist
+	int currentRegion = 0;							  //How many different regions exist
 
 	
 	public Model(){
 		gamecnt = 1;
-		fields = new IS[9][9];		//create game table with empty intersections
-		fields_b4 = new IS[9][9];	//copy of the game table for undoing moves
-		tmp_4_ko = new IS[9][9];	//new "ko"-test field
+		fields = new IS[9][9];		//Create game table with empty intersections
+		fields_b4 = new IS[9][9];	//Copy of the game table for undoing moves
+		tmp_4_ko = new IS[9][9];	//New KO-test field
 		
 		for (int y=0; y<=8; y++){
 			for (int x=0; x<=8; x++){
@@ -50,26 +50,26 @@ public class Model extends Observable{
 				fields_b4[y][x] = IS.E;
 			}
 		}
-	}
+	}//Model constructor
 	
 	public void send(int b){
 	    try {
-	        System.out.println("Model: Sende Zug...");
+	        System.out.println("Model: send: Going to send draw...");
             lan.send(b); 
-            System.out.println("Model: Zug gesendet");
+            System.out.println("Model: send: Sent draw");
 	    } catch (IOException e) {
 	        // TODO Auto-generated catch block
 	        e.printStackTrace();
 	    }
-	}
+	}//send
 	
 	public void receive(){
 	    try {
-	        System.out.println("Model: call to receive");
+	        System.out.println("Model: receive: Call to receive");
             int recv = lan.receive();
-            System.out.println("Model: return from receive");
+            System.out.println("Model: receive: Return from receive");
             if (recv == -1){
-                //TODO gegn. Pass lokal ausführen
+                //TODO Passing: Carry out opponent's pass draw locally
             }else{
                 int y = recv / 9;
                 int x = recv - 9*y;
@@ -81,14 +81,14 @@ public class Model extends Observable{
 	        // TODO Auto-generated catch block
 	        e.printStackTrace();
 	    }
-	}
+	}//receive
 	
     /**
      * Starts the {@link LAN_Conn} and thereby establishes the LAN connection 
      * @return 0 in case of success; -1 if an IOException has occurred
      * and re-initialization is necessary
      */
-    public int estbl_LanComm() {
+    public int estbl_LanConn() {
         try{
             this.lan.init();
             this.lan.start();
@@ -96,7 +96,7 @@ public class Model extends Observable{
         }catch (Exception e) {
             return -1;
         }
-    }   
+    }//estbl_LanConn   
 	
 	/**
 	 * Creates a {@link Server} or a {@link Client} depending on {@code server_address} and assigns it to {@code lan}. Also sets {@code player}
@@ -111,8 +111,12 @@ public class Model extends Observable{
 	        this.lan = new Client(this, server_address);
 	        this.player = Player.BLACK;
 	    }
-	}
+	}//setLAN_Role
 	
+	/**
+	 * Returns true if it's the calling player's turn.
+	 * @return true if it's the calling player's turn.
+	 */
 	public boolean isMyTurn(){
 	    if ( player.equals(Player.BLACK) && getCurrentPlayer().equals(IS.B)
           || player.equals(Player.WHITE) && getCurrentPlayer().equals(IS.W)){
@@ -120,7 +124,7 @@ public class Model extends Observable{
 	    }else{
 	        return false;
 	    }
-	}
+	}//isMyTurn
 	
 	public Player getPlayer(){
 	    return player;
@@ -138,7 +142,7 @@ public class Model extends Observable{
         return fields_b4[i][j];
     }//getCpyIntersection
     
-    private IS getCurrentPlayer(){       //getting the color of the player whose turn it is
+    private IS getCurrentPlayer(){       //Getting the color of the player whose turn it is
         if (gamecnt % 2 == 0){
             return IS.W;
         }else{
@@ -191,18 +195,20 @@ public class Model extends Observable{
     }//getScr_W
 
     
-    //method to get both players' territory on the game table
+    /**
+	 * Get both players' territory on the game table
+     */
 	public void getTerritory(){
-		fieldCpy = new int[9][9];                 //create a copy of the go table to mark empty intersections
+		fieldCpy = new int[9][9];                 //Create a copy of the go table to mark empty intersections
 		ter_B = 0;
 	    ter_W = 0;
-	    currentRegion = 0;						  //number of current region (1-81)
+	    currentRegion = 0;						  //Number of current region (1-81)
 	    for (int i=0; i < fields.length; i++){     
-	        for (int j=0; j < fields.length; j++){ //make sure that every intersection on the table has been tested
+	        for (int j=0; j < fields.length; j++){ //Make sure that every intersection on the table has been tested
 	            
-	            blackRegion = false;               //reset region marker
-	            whiteRegion = false;               //reset region marker
-	            currentRegion++;				   //mark intersections of an empty region in isEmptyRegion() as a specific region
+	            blackRegion = false;               //Reset region marker
+	            whiteRegion = false;               //Reset region marker
+	            currentRegion++;				   //Mark intersections of an empty region in isEmptyRegion() as a specific region
 	            markRegion(i, j);
 	            
 	            int cnt = 0;
@@ -213,22 +219,30 @@ public class Model extends Observable{
 	                    }//if
 	                }//for
 	            }//for
-	            if (blackRegion && !whiteRegion){      	 //test whether the region marked before is Black's territory
+	            if (blackRegion && !whiteRegion){      	 //Test whether the region marked before is Black's territory
 	                ter_B += cnt;
-	            }else if (whiteRegion && !blackRegion){      //test whether the region marked before is White's territory
+	            }else if (whiteRegion && !blackRegion){      //Test whether the region marked before is White's territory
 	                ter_W += cnt;            	
 	            }//if
 	        }//for
 	    }//for
 	}//getTerritory
 
-	//method to mark empty regions and find out whether they are a region of Black or White
+	
+	/**
+	 * TODO Complete description
+	 * <br><br>
+	 * Returns true if ???
+	 * <p> Mark empty regions and find out whether they are a region of Black or White 
+	 * @param i
+	 * @param j
+	 * @return true if ???
+	 */
 	public boolean markRegion(int i, int j){        
-		
 		if (i < 0 || i >= fields.length || j < 0 || j >= fields.length){
-	        return false;	                        //reached border of game table
+	        return false;	                        //Reached border of game table
 		}else if ( fieldCpy[i][j] > 0 ){
-	    	return false;        					//found already marked field ( >0 = a region, -1 = black stone, -2 = white stone)
+	    	return false;        					//Found already marked field ( >0 = a region, -1 = black stone, -2 = white stone)
 		}else if ( fieldCpy[i][j] == -1 ){
 			blackRegion = true;
 			return false;
@@ -238,16 +252,16 @@ public class Model extends Observable{
 	    }else if ( fields[i][j].equals(IS.B) ){    
 	        blackRegion = true;
 	        fieldCpy[i][j] = -1;
-	        return false;                          //found black field -> border of empty region!
+	        return false;                          //Found black field -> border of empty region!
 	    }else if ( fields[i][j].equals(IS.W) ){
             whiteRegion = true;
             fieldCpy[i][j] = -2;
-            return false;                          //found white field -> border of empty region!
+            return false;                          //Found white field -> border of empty region!
 	    }else{
 	        
-	        fieldCpy[i][j] = currentRegion;        //mark the empty intersection as part of the current region
+	        fieldCpy[i][j] = currentRegion;        //Mark the empty intersection as part of the current region
 	        
-	        if (   ( markRegion(i, j-1) )           //look west
+	        if (   ( markRegion(i, j-1) )           //Look west
 	             ||( markRegion(i-1, j) )           //north
 	             ||( markRegion(i, j+1) )           //east
 	             ||( markRegion(i+1, j) ) ) {       //south
@@ -260,39 +274,58 @@ public class Model extends Observable{
 
 	
 	
-	//is the move no suicide?
+	/**
+	 * TODO Complete description
+	 * <br><br>
+	 * Returns true if the move is no suicide
+	 * @param i
+	 * @param j
+	 * @return true if the move is no suicide
+	 */
     public boolean isNoSuicide(int i, int j) {
-        int [][] fieldCpy = new int[9][9];										//make new field copy
-        if (hasRegionFreedom(i, j, i, j, getCurrentPlayer(), fieldCpy)) {				//if the stone's region has a freedom, it isn't suicide
+        int [][] fieldCpy = new int[9][9];										//Make new field copy
+        if (hasRegionFreedom(i, j, i, j, getCurrentPlayer(), fieldCpy)) {				//If the stone's region has a freedom, it isn't suicide
         	return true;
-        } else {																//is it really suicide?
-        																		//new matrix for marking fields from the view of the
-        	int [][] tmp = new int[9][9];										//current player's opponent 
-        																		//mark the position of the current field with the color of
-        	tmp[i][j] = 1;														//the stone that shall be put 
+        } else {																//Is it really suicide?
+        																		//New matrix for marking fields from the view of the
+        	int [][] tmp = new int[9][9];										//Current player's opponent 
+        																		//Mark the position of the current field with the color of
+        	tmp[i][j] = 1;														//The stone that shall be put 
         	for (int x=0; x < fields.length; x++){
         		for (int y=0; y < fields.length; y++){
-        			if (fieldCpy[x][y] == 1){									//if it's an adjacent opponent stone
-        				if (!hasRegionFreedom(x, y, x, y, getOpponent(getCurrentPlayer()), tmp)){	//if a surrounding opponent region has no freedom
+        			if (fieldCpy[x][y] == 1){									//If it's an adjacent opponent stone
+        				if (!hasRegionFreedom(x, y, x, y, getOpponent(getCurrentPlayer()), tmp)){	//If a surrounding opponent region has no freedom,
         					return true;													//it's no suicide
         				}
         			}
                 	for (int k=0; k < fields.length; k++){
                 		for (int l=0; l < fields.length; l++){
-                			if (tmp[k][l] == 2){	//if the field has already been marked:
-                				tmp[k][l] = 0;		//clear it for hasRegionFreedom
+                			if (tmp[k][l] == 2){	//If the field has already been marked:
+                				tmp[k][l] = 0;		//Clear it for hasRegionFreedom
                 			}
                 		}
                 	}
         		}
         	}
         	return false;
-        }// if
-    }// isNoSuicide
+        }//if
+    }//isNoSuicide
     
     
 	
-	//basically: "has the region of the stone [sx][sy] of the player [color] a freedom?"
+    /**
+     * TODO Complete description
+	 * <br><br>
+	 * Returns true if the region of stone {@code [sx][sy]} of player {@code [color]} has a freedom
+	 * <p> ??? 
+     * @param sx
+     * @param sy
+     * @param xNow
+     * @param yNow
+     * @param color
+     * @param fieldCpy
+     * @return
+     */
 	public boolean hasRegionFreedom(int sx, int sy, int xNow, int yNow, IS color, int[][] fieldCpy){
 	    if (xNow < 0 || xNow>= fields.length || yNow < 0 || yNow >= fields.length){
 	        return false;                                //reached border of game table
@@ -317,51 +350,68 @@ public class Model extends Observable{
         }//if
     }//hasRegionFreedom
 	
-	//the method for test on "ko"
-	//and for actually executing the move
-	//returns the field in its state after the preceding move
-    public void processMove(int y, int x) {
-    																	//save state of prisoners for eventual undoing
-    
+	
+	/**
+	 * TODO Complete description
+	 * <br><br>
+	 * Executes the move and tests for KO.
+	 * Returns the field in its state after the preceding move 
+	 * @param y
+	 * @param x
+	 */
+	public void processMove(int y, int x) {
+		//Save state of prisoners for eventual undoing
 		this.pris_W_b4 = this.pris_W;
 		this.pris_B_b4 = this.pris_B;
         
 		if (!areEqualFields(fields_b4, fields)){
-			cpyField(fields_b4, tmp_4_ko);								//save of copy of fields_b4 for testing on illegal move in "ko"-situation
+			cpyField(fields_b4, tmp_4_ko);								//Save of copy of fields_b4 for testing on illegal move in "ko"-situation
 		}
 		
-        cpyField(fields, fields_b4);									//save state of the fields for eventual undoing
-        fields[y][x] = getCurrentPlayer();										//put player's stone on empty intersection
+        cpyField(fields, fields_b4);									//Save state of the fields for eventual undoing
+        fields[y][x] = getCurrentPlayer();										//Put player's stone on empty intersection
         int [][] lookField = new int [9][9];
-        lookAround(y, x, y, x, getCurrentPlayer(), lookField);					//search for opponent regions to be removed							
-        gamecnt++;														//game counter is set to next player's turn
+        lookAround(y, x, y, x, getCurrentPlayer(), lookField);					//Search for opponent regions to be removed							
+        gamecnt++;														//Game counter is set to next player's turn
     }// processMove
     
     
     
-    //the current player's stone "looks around"
-    //if he finds an opponent stone, the opponent stone marks its region and finds out whether it has a freedom
-    //if its region has no freedom, the region is removed
+    /**
+     * TODO Complete description
+     * <br><br>
+     * Returns true if ???
+     * <p> The current player's stone "looks around".
+     * If it finds an opponent stone, the latter marks its region and finds out whether it has a freedom.
+     * If its region has no freedom, the region is removed.
+     * @param sx
+     * @param sy
+     * @param xNow
+     * @param yNow
+     * @param color
+     * @param lookField
+     * @return true if ???
+     */
     public boolean lookAround(int sx, int sy, int xNow, int yNow, IS color, int[][] lookField){
 	    if (xNow < 0 || xNow>= fields.length || yNow < 0 || yNow >= fields.length){
 	        return false;
 	    }else if (lookField[xNow][yNow] == 1 || lookField[xNow][yNow] == 2) {
-	    	return false;                                // already been here
+	    	return false;                                //Already been here
 	    }else if (fields[xNow][yNow].equals(IS.E)){
 	    	return false;
-	    }else if (fields[xNow][yNow].equals(getOpponent(color))){				//found adjacent stone of opponent color
-	     	int [][] tmp = new int[9][9];										//new field copy to process the move
+	    }else if (fields[xNow][yNow].equals(getOpponent(color))){				//Found adjacent stone of opponent color
+	     	int [][] tmp = new int[9][9];										//New field copy to process the move
 	     	tmp[sx][sy] = 1;
-	    	if (!hasRegionFreedom(xNow, yNow, xNow, yNow, getOpponent(color), tmp)){	//the opponent region has no freedom and is removed
+	    	if (!hasRegionFreedom(xNow, yNow, xNow, yNow, getOpponent(color), tmp)){	//The opponent region has no freedom and is removed
                 for (int x = 0; x < fields.length; x++) {
                     for (int y = 0; y < fields.length; y++) {
                         if (tmp[x][y] == 2) {
                             fields[x][y] = IS.E;
                             tmp[x][y] = 0;               
-							if (gamecnt % 2 == 0) { 							// White's move
-								pris_W++; 										// White captures the removed black stone
-							} else {											// Black's move
-								pris_B++; 										// Black captures the removed white stone
+							if (gamecnt % 2 == 0) { 							//White's move
+								pris_W++; 										//White captures the removed black stone
+							} else {											//Black's move
+								pris_B++; 										//Black captures the removed white stone
 							}// if                               
                         }//if
                     }//for
@@ -377,9 +427,9 @@ public class Model extends Observable{
 	    	}
 	    	return false;
 		}else if (fields[xNow][yNow].equals(color)) {
-			lookField[xNow][yNow] = 1; 											// found adjacent stone of this color
+			lookField[xNow][yNow] = 1; 											//Found adjacent stone of this color
 			
-            if (    (lookAround(sx, sy, xNow, yNow-1, color, lookField))     						// look west, north, east, south
+            if (    (lookAround(sx, sy, xNow, yNow-1, color, lookField))     						//Look west, north, east, south
                  || (lookAround(sx, sy, xNow-1, yNow, color, lookField))
                  || (lookAround(sx, sy, xNow, yNow+1, color, lookField)) 
                  || (lookAround(sx, sy, xNow+1, yNow, color, lookField))) {
@@ -392,27 +442,38 @@ public class Model extends Observable{
     }//lookAround
 
 	
-	
-	public void undoMove(){
-		if (gamecnt > 1 ){							//if it's the first move, there's nothing to be undone
+    /**
+     * TODO Complete description
+     * <br><br>
+     */
+    public void undoMove(){
+		if (gamecnt > 1 ){							//If it's the first move, there's nothing to be undone
 		    
-			cpyField(fields_b4, fields);			//copy array fields before -> fields				
+			cpyField(fields_b4, fields);			//Copy array fields before -> fields				
 
-			if (getCurrentPlayer().equals(IS.B)){			//depending on the player whose turn it was, his latest prisoners are undone
+			if (getCurrentPlayer().equals(IS.B)){			//Depending on the player whose turn it was, his latest prisoners are undone
 				this.pris_W = this.pris_W_b4;							
 			}else{
 				this.pris_B = this.pris_B_b4;				
 			}
-			gamecnt--;								//set game count to last turn
+			gamecnt--;								//Set game count to last turn
 		}
 	}//undoMove
 	
 
-    //method to find out whether to IS[][] fields have identical values
-	//used to assure that the undo button is hit only once in a row
-		//if fields and fields_b4 are already equal, it's not allowed to undo your move
-	//used to find out whether it is a "ko"-situation
-		//if fields and tmp_4_ko are equal, the move reproduces the preceding state of the field and therefore isn't allowed
+    /**
+     * TODO Improve description
+     * <br><br>
+     * Returns true if two {@code IS[][]} fields have identical values.
+	 * 
+	 * <p> Used to assure that the undo button is hit only once in a row.
+	 * If {@code fields} and {@code fields_b4} are already equal, it's not allowed to undo your move.
+	 * Used to find out whether it is a KO-situation.
+	 * If {@code fields} and {@code tmp_4_ko} are equal, the move reproduces the preceding state of the field and therefore isn't allowed.
+     * @param one one {@code IS[][]} field
+     * @param other the other
+     * @return true if two {@code IS[][]} fields have identical values. 
+     */
     public boolean areEqualFields(IS[][] one, IS[][] other){
         for (int i=0; i < one.length; i++){
             for (int j=0; j < one.length; j++){
@@ -425,22 +486,28 @@ public class Model extends Observable{
     }//areEqualFields
     
     
-	
-    //method to pass a move
+    //TODO Passing: Display waiting dialog after passing (instead of "Bitte warten Sie bis Sie an der Reihe sind")
+    /**
+     * Pass a draw
+     */
     public void pass() {
     	cpyField(fields, fields_b4);
-        if (this.gamecnt % 2 == 0) { // white passes
+        if (this.gamecnt % 2 == 0) { //White passes
             this.pris_B_b4 = this.pris_B;
-            this.pris_B++; // and black conquers a white stone
+            this.pris_B++; //and black receives a prisoner point
 
-        } else { // black passes
+        } else { //Black passes
             this.pris_W_b4 = this.pris_W;
-            this.pris_W++; // and white conquers a black stone
-        }// if
+            this.pris_W++; //and white receives a prisoner point
+        }
         this.gamecnt++;
-    }// pass
+    }//pass
     
     
+    /**
+     * Returns true if the draw that is being processed is a double pass.
+     * @return true if the draw that is being processed is a double pass
+     */
     public boolean isDoublePass(){
     	int pris_tmp;
     	int pris_tmp_b4;
@@ -462,7 +529,12 @@ public class Model extends Observable{
     
     
     
-	//method to find out whether the player is trying to put his stone on an empty intersection
+    /**
+     * Returns true if the player is trying to put his stone on an empty intersection.
+     * @param i 
+     * @param j
+     * @return true if the player is trying to put his stone on an empty intersection
+     */
 	public boolean isEmptyIntersection(int i, int j){
 	    if (fields[i][j] == IS.E) {    
 	        return true;
@@ -472,8 +544,14 @@ public class Model extends Observable{
 	}//isEmptyIntersection
 	
 	
-    //method for copying the whole field while either processing or undoing a move 
-    public void cpyField(IS[][] src, IS[][] dest){
+	/**
+	 * TODO Complete description
+	 * <br><br>
+	 * Copy the whole field while either processing or undoing a move. Purpose ??? 
+	 * @param src
+	 * @param dest
+	 */
+	public void cpyField(IS[][] src, IS[][] dest){
         for (int i=0; i < src.length; i++){
             for (int j=0; j < src.length; j++){
                 dest[i][j] = src[i][j];
@@ -481,13 +559,14 @@ public class Model extends Observable{
         }
     }//cpyField
 
+	//TODO Guess it's not OK to work around a 'protected' qualifier like this...
     public void setChanged1() {
         setChanged();
-    }
+    }//setChanged1
     
     public void notifyObservers2(Object updateMessage){
         notifyObservers(updateMessage);
-    }
+    }//notifyObservers2
 	
 
 }//Model

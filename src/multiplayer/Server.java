@@ -7,8 +7,13 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import javax.swing.SwingWorker;
+
+/**
+ * @author Lukas Kern
+ */
 public class Server extends LAN_Conn{
-    // Port der Serveranwendung
+    //Port of the server application
     public static final int SERVER_PORT = 10001;
     
     private ServerSocket socket;
@@ -19,58 +24,68 @@ public class Server extends LAN_Conn{
     }
     
     /**
-     * Der Server wartet auf Verbindungen von Clients (accept)
+     * Uses {@link ServerSocket#accept} to wait for a client who wishes to connect. 
+     * @see ServerSocket#accept
      */
     public void run() {
         try {
-            System.out.println("Server: after init");
             client = socket.accept();
-            System.out.println("Server: Client accepted!");
+            System.out.println("Server: run: Client connected!");
             model.setChanged1();
-            System.out.println("Server: a");
-            model.notifyObservers2(UpdateMessages.CLIENT_CONNECTED);
-            System.out.println("Server: view notified (choose)");
-            model.receive();
-            synchronized (this) {
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+            //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
+            //makes his draw.
+            SwingWorker worker = new SwingWorker(){
+                @Override
+                protected Object doInBackground() throws Exception {
+                    model.receive();
+                    return null;
                 }
-            }
+            };
+            worker.execute();
+            //Causes View#update and thus to waiting.setVisible(true)
+            model.notifyObservers2(UpdateMessages.CLIENT_CONNECTED);
+            System.out.println("Server: run: View notified (choose)");
         } catch (IOException e1) {
             e1.printStackTrace();
         }
-    }
+    }//run
     
+    /**
+     * Sends a draw via a stream
+     */
     public void send(int b) throws IOException{
+        System.out.println("Server: send: Going to send draw...");
         client.getOutputStream().write(b);
+        System.out.println("Server: send: Sent draw");
     }
     
+    /**
+     * Receives a draw via a stream  
+     */
     public int receive() throws IOException{
-        // Datenstrom zum Lesen verwenden
+        //Use stream for reading
         InputStream stream = client.getInputStream();
 
-        System.out.println("Server: data available...?");
-        // Sind Daten verfuegbar?
+        System.out.println("Server: receive: Data available...?");
+        //Is data available?
         while (stream.available() == 0);
-        System.out.println("Server: data available!");
+        System.out.println("Server: receive: Data available!");
 
-        // Ankommende Daten lesen und ausgeben
+        //Read and return incoming data
         return stream.read();
     }
 
     /**
-     * Erzeugen des Sockets (binden an Port)
+     * Creates the {@code socket} and binds it to {@code SERVER_PORT}
      * @throws IOException
      */
     public void init() throws IOException {
-    	System.out.println("The server\n----------\n");
+    	System.out.println("The server (White)\n------------------\n");
     	socket = new ServerSocket(SERVER_PORT);
     }
     
     /**
-     * Verbindung beenden und ServerSocket schließen
+     * Closes the connection and the {@code socket}
      */
     public void terminate() throws IOException{
         client.close();
