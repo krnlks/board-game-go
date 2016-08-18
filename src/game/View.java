@@ -62,7 +62,7 @@ public class View implements Observer{
                         	updatePlayingField();
                         	updateScorePanel();
                             System.out.println("View: FBAL: Updated score panel.");
-                            printThreadInfo(); //Is event dispatch thread? (yes)
+                            //This is the event dispatch thread
                             System.out.println("View: FBAL: Going to send draw to opponent...");
                             model.send((fb.y*9) + fb.x); //something in [0,80]
                             System.out.println("View: FBAL: Sent draw to opponent.");
@@ -184,10 +184,6 @@ public class View implements Observer{
         choose.setVisible(true);
     }//View constructor
     
-    private void printThreadInfo(){
-    	System.out.println("View: Thread: " + Thread.currentThread().getName() + ". Event dispatch thread: " + 
-    			javax.swing.SwingUtilities.isEventDispatchThread());
-    }//printThreadInfo
     
     /**
      * Creates and initializes all the UI components
@@ -372,10 +368,9 @@ public class View implements Observer{
             System.out.println("View: update: Going to dispose choose and make waiting visible");
             choose.dispose();
             System.out.println("View: update: Disposed choose");
-            System.out.println("View: update: " + Thread.currentThread().getName() + ". Event dispatch thread: " + 
-                    javax.swing.SwingUtilities.isEventDispatchThread());
             waiting.setVisible(true);
-        }else if (arg1.equals(UpdateMessages.OPPONENT)){
+        }else if (arg1.equals(UpdateMessages.DRAW_RECVD)){
+            System.out.println("View: update: DRAW_RECVD: " + Thread.currentThread().getName());
             waiting.setVisible(false);
             updatePlayingField();
             updateScorePanel();

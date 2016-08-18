@@ -76,7 +76,7 @@ public class Model extends Observable{
                 this.processMove(y, x);
             }
             setChanged();
-            notifyObservers(UpdateMessages.OPPONENT);
+            notifyObservers(UpdateMessages.DRAW_RECVD);
 	    } catch (IOException e) {
 	        // TODO Auto-generated catch block
 	        e.printStackTrace();

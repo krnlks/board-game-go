@@ -30,7 +30,7 @@ public class Server extends LAN_Conn{
     public void run() {
         try {
             client = socket.accept();
-            System.out.println("Server: run: Client connected!");
+            System.out.println("Server: Client connected!");
             model.setChanged1();
             //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
             //makes his draw.
@@ -44,7 +44,7 @@ public class Server extends LAN_Conn{
             worker.execute();
             //Causes View#update and thus to waiting.setVisible(true)
             model.notifyObservers2(UpdateMessages.CLIENT_CONNECTED);
-            System.out.println("Server: run: View notified (choose)");
+            System.out.println("Server: View notified");
         } catch (IOException e1) {
             e1.printStackTrace();
         }
@@ -54,9 +54,9 @@ public class Server extends LAN_Conn{
      * Sends a draw via a stream
      */
     public void send(int b) throws IOException{
-        System.out.println("Server: send: Going to send draw...");
+        System.out.println("Server: Going to send draw...");
         client.getOutputStream().write(b);
-        System.out.println("Server: send: Sent draw");
+        System.out.println("Server: Sent draw");
     }
     
     /**
@@ -66,10 +66,10 @@ public class Server extends LAN_Conn{
         //Use stream for reading
         InputStream stream = client.getInputStream();
 
-        System.out.println("Server: receive: Data available...?");
+        System.out.println("Server: Data available...?");
         //Is data available?
         while (stream.available() == 0);
-        System.out.println("Server: receive: Data available!");
+        System.out.println("Server: Data available!");
 
         //Read and return incoming data
         return stream.read();

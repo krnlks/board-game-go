@@ -24,9 +24,9 @@ public class Client extends LAN_Conn{
      * Sends a draw via a stream
      */
     public void send(int b) throws IOException {
-        System.out.println("Client: send: Going to send draw...");
+        System.out.println("Client: Going to send draw...");
         socket.getOutputStream().write(b);
-        System.out.println("Client: send: Sent draw");
+        System.out.println("Client: Sent draw");
     }
     
     /**
@@ -50,7 +50,7 @@ public class Client extends LAN_Conn{
     public void init() throws Exception {
     	System.out.println("The client (Black)\n------------------\n");
         socket = new Socket(server_addr, Server.SERVER_PORT);
-        System.out.println("Client: init: Connected to server: "
+        System.out.println("Client: Connected to server: "
                 + socket.getRemoteSocketAddress());
     }//init
 
