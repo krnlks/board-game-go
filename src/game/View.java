@@ -13,6 +13,8 @@ import multiplayer.UpdateMessages;
  * - teilweise werden hier Model-Methoden direkt aufgerufen, z.b. if (model.estbl_LanComm() == 0){ ... 
  */
 
+//TODO Spielfeld nicht "abschneiden" (Kommentar von Yannic)
+
 public class View implements Observer{
     
     private class FieldButton extends JButton{
@@ -161,7 +163,7 @@ public class View implements Observer{
     JPanel playingField;
     FieldButton[][] fieldButtons;
     ImageIcon intersct_E = new ImageIcon("icons/Intersct.JPG");
-    ImageIcon intersct_B = new ImageIcon("icons/Intersct_S.JPG");
+    ImageIcon intersct_B = new ImageIcon("icons/Intersct_B.JPG");
     ImageIcon intersct_W = new ImageIcon("icons/Intersct_W.JPG");
    
     JPanel scorePanel;
