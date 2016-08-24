@@ -7,12 +7,13 @@ import java.io.IOException;
 /**
  * Interface which represents the LAN connection and which is
  * to be implemented e.g. by a server/client 
+ * 
  * @author Lukas Kern
  */
 public abstract class LAN_Conn extends Thread {
     
     protected Model model;
-    public enum LAN { SERVER, CLIENT };
+    public enum ROLE { SERVER, CLIENT };
     
     /**
      * @param b the message to be sent 
