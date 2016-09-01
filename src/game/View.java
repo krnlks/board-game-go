@@ -117,7 +117,7 @@ public class View implements Observer{
                 System.out.println("View: PBAL: Sent pass to opponent.");
                 System.out.println("View: PBAL: Going to wait for opponent's draw...");
                 recv_wait();
-            }else{												//Game will be over
+            }else{												//Both players passed, game is over
                 model.pass();
                 updateScorePanel();
                 String result;
@@ -132,7 +132,7 @@ public class View implements Observer{
                     result = String.format("Draw!", scrW, scrB);
                 }
                 JOptionPane.showMessageDialog(gameWindow, result);
-                model.send(-1);
+                model.send(Constants.SEND_PASS);
                 gameWindow.dispose();
                 }
         }//actionPerformed
