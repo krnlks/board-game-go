@@ -25,6 +25,7 @@ public class Server extends LAN_Conn{
     
     /**
      * Uses {@link ServerSocket#accept} to wait for a client who wishes to connect. 
+     * 
      * @see ServerSocket#accept
      */
     public void run() {
@@ -77,6 +78,7 @@ public class Server extends LAN_Conn{
 
     /**
      * Creates the {@code socket} and binds it to {@code SERVER_PORT}
+     * 
      * @throws IOException
      */
     public void init() throws IOException {

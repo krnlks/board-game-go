@@ -1,6 +1,7 @@
 package game;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Observable;
 
 import multiplayer.Client;
@@ -19,10 +20,13 @@ import multiplayer.UpdateMessages;
 //TODO Change KO back to "ko" - it's not KO but the name of a rule in Go 
 //TODO Look at more complex methods in Model and write good and clear description
 
+//TODO Sometimes I'm using ==, sometimes .equals. Fix that!
+
 /**
  * The data and logic for the game. In Go Black plays against White. 
  * The game is played on a square board that consists of intersections that are either empty
  * or have a black or white stone upon them.
+ * 
  * @author Lukas Kern
  */
 public class Model extends Observable{
@@ -38,6 +42,7 @@ public class Model extends Observable{
     
     /**
      * The number of the current draw, incremented by each player in each of their turns. Used to determine whose turn it is.
+     * 
      * <p>TODO Also used for something else (like comparing board states)? Maybe there's a better solution. 
      */
 	private int gamecnt;
@@ -48,24 +53,61 @@ public class Model extends Observable{
 	private IS[][] board;
 	private IS[][] board_b4;			 	//The preceding state of the board
 	private IS[][] tmp_4_ko;				//Saves the state of intersections_b4 while testing on illegal move in KO-situation
-	int[][] boardCpy;                       //TODO Describe purpose!
+	int[][] mark;                            //Used to mark regions of each player
 	boolean blackRegion;
 	boolean whiteRegion;
 	int currentRegion = 0;							  //How many different regions exist
 	int dim = Constants.BOARD_DIM;           //Board dimension (Beginner = 9, Professional = 19)
 	
+	//TODO Quite some things done in constructor. Outsource creation of the intersections to an init() method?
 	public Model(){
 		gamecnt = 1;                    //The game starts at draw #1
 		board = new IS[dim][dim];		//Create board with empty intersections
 		board_b4 = new IS[dim][dim];	//Copy of the board for undoing moves
 		tmp_4_ko = new IS[dim][dim];	//New KO-test board
 		
-		for (int y=0; y < dim; y++){
-			for (int x=0; x < dim; x++){
-				board[y][x] = IS.E;
-				board_b4[y][x] = IS.E;
+		IS is;                          //Used for initializing intersections
+		//TODO Redundant vs what is done in View?
+		//Create center intersections
+		for (int y=1; y < dim-1; y++){
+			for (int x=1; x < dim-1; x++){
+			    is = new IS(IS.Orient.C);
+				board[y][x] = is;
 			}
 		}
+		
+        
+        //Create corner intersections
+        is = new IS(IS.Orient.TL);
+        board[0][0] = is;
+        is = new IS(IS.Orient.TR);
+        board[0][dim-1] = is;
+        is = new IS(IS.Orient.BL);
+        board[dim-1][0] = is;
+        is = new IS(IS.Orient.BR);
+        board[dim-1][dim-1] = is;
+        
+        
+        //Create edge intersections
+        for (int x=1; x<dim-1; x++){ //Top
+            is = new IS(IS.Orient.T);
+            board[0][x] = is;
+        }
+        for (int y=1; y<dim-1; y++){ //Left
+            is = new IS(IS.Orient.L);
+            board[y][0] = is;
+        }
+        for (int y=1; y<dim-1; y++){ //Right
+            is = new IS(IS.Orient.R);
+            board[y][dim-1] = is;
+        }
+        for (int x=1; x<dim-1; x++){ //Bottom
+            is = new IS(IS.Orient.B);
+            board[dim-1][x] = is;
+        }
+        
+        cpyBoard(board, board_b4);
+		
 	}//Model constructor
 	
 	public void send(int b){
@@ -101,6 +143,7 @@ public class Model extends Observable{
 	
     /**
      * Starts the {@link LAN_Conn} and thereby establishes the LAN connection 
+     * 
      * @return 0 in case of success; -1 if an IOException has occurred
      * and re-initialization is necessary
      */
@@ -116,6 +159,7 @@ public class Model extends Observable{
 	
 	/**
 	 * Creates a {@link Server} or a {@link Client} depending on {@code server_address} and assigns it to {@code lan}. Also sets {@code player}
+	 * 
 	 * @param server_address empty string if this shall be the server,
 	 * or the address of the remote server if this shall be the client
 	 */
@@ -131,11 +175,12 @@ public class Model extends Observable{
 	
 	/**
 	 * Returns true if it's the calling player's turn.
+	 * 
 	 * @return true if it's the calling player's turn.
 	 */
 	public boolean isMyTurn(){
-	    if ( player.equals(Player.BLACK) && getCurrentPlayer().equals(IS.B)
-          || player.equals(Player.WHITE) && getCurrentPlayer().equals(IS.W)){
+	    if ( player.equals(Player.BLACK) && getCurrentPlayer().equals(IS.State.B)
+          || player.equals(Player.WHITE) && getCurrentPlayer().equals(IS.State.W)){
 	        return true;
 	    }else{
 	        return false;
@@ -154,24 +199,28 @@ public class Model extends Observable{
         return board[y][x];
     }// getIntersection
     
-    public IS getCpyIntersection(int y, int x){
+    public IS getIntersectionB4(int y, int x){
         return board_b4[y][x];
     }//getCpyIntersection
     
     //TODO This doesn't return the Player but the "color of the stone on an intersection"(?!?!) -> Either change return type to Player or create Enum Stone that doesn't contain E (empty)  
-    private IS getCurrentPlayer(){       //Getting the color of the player whose turn it is
+    private IS.State getCurrentPlayer(){       //Getting the color of the player whose turn it is
         if (gamecnt % 2 == 0){
-            return IS.W;
+            return IS.State.W;
         }else{
-            return IS.B;
+            return IS.State.B;
         }
     }//getPlayer
     
-    private IS getOpponent(IS color){       //getting the color of the specified color's opponent
-        if (color == IS.W){
-            return IS.B;
+    //TODO Currently this doesn't get the opponent but the state of the intersection (which could also be empty but let's hope it's never). Either change return type to Player(color) or change the way it is called/used!
+    private IS.State getOpponent(IS.State state){       //Gets the color of the specified color's opponent
+        if (state == IS.State.W){
+            return IS.State.B;
+        }else if(state == IS.State.B){
+            return IS.State.W;
         }else{
-            return IS.W;
+            System.out.println("This should not have happened.");
+            return null;
         }
     }//getOpponent
 
@@ -216,20 +265,20 @@ public class Model extends Observable{
 	 * Get both players' territory on the board
      */
 	public void getTerritory(){
-		boardCpy = new int[dim][dim];                 //Create a copy of the Go board to mark empty intersections
+		mark = new int[dim][dim];                 //Create a copy of the Go board to mark empty intersections
 		ter_B = 0;
 	    ter_W = 0;
 	    currentRegion = 0;						  //Number of current region (1-81)
-	    for (int i=0; i < dim; i++){     
-	        for (int j=0; j < dim; j++){           //Make sure that every intersection on the board has been tested
+	    for (int y=0; y < dim; y++){     
+	        for (int x=0; x < dim; x++){           //Make sure that every intersection on the board has been tested
 	            
 	            blackRegion = false;               //Reset region marker
 	            whiteRegion = false;               //Reset region marker
 	            currentRegion++;				   //Mark intersections of an empty region in isEmptyRegion() as a specific region
-	            markRegion(i, j);
+	            markRegion(y, x);
 	            
 	            int cnt = 0;
-	            for (int[] ia : boardCpy){
+	            for (int[] ia : mark){
 	                for (int val : ia){
 	                    if (val == currentRegion){
 	                        cnt++;
@@ -251,6 +300,7 @@ public class Model extends Observable{
 	 * <br><br>
 	 * Returns true if ???
 	 * <p> Mark empty regions and find out whether they are a region of Black or White 
+	 * 
 	 * @param y
 	 * @param x
 	 * @return true if ???
@@ -258,25 +308,25 @@ public class Model extends Observable{
 	public boolean markRegion(int y, int x){        
 		if (y < 0 || y >= dim || x < 0 || x >= dim){
 	        return false;	                        //Reached border of game table
-		}else if ( boardCpy[y][x] > 0 ){
+		}else if ( mark[y][x] > 0 ){
 	    	return false;        					//Found already marked field ( >0 = a region, -1 = black stone, -2 = white stone)
-		}else if ( boardCpy[y][x] == -1 ){
+		}else if ( mark[y][x] == -1 ){
 			blackRegion = true;
 			return false;
-		}else if ( boardCpy[y][x] == -2 ){
+		}else if ( mark[y][x] == -2 ){
 			whiteRegion = true;
 			return false;
-	    }else if ( board[y][x].equals(IS.B) ){    
+	    }else if ( board[y][x].getState().equals(IS.State.B) ){    
 	        blackRegion = true;
-	        boardCpy[y][x] = -1;
+	        mark[y][x] = -1;
 	        return false;                          //Found black field -> border of empty region!
-	    }else if ( board[y][x].equals(IS.W) ){
+	    }else if ( board[y][x].getState().equals(IS.State.W) ){
             whiteRegion = true;
-            boardCpy[y][x] = -2;
+            mark[y][x] = -2;
             return false;                          //Found white field -> border of empty region!
 	    }else{
 	        
-	        boardCpy[y][x] = currentRegion;        //Mark the empty intersection as part of the current region
+	        mark[y][x] = currentRegion;        //Mark the empty intersection as part of the current region
 	        
 	        if (   ( markRegion(y, x-1) )           //Look west
 	             ||( markRegion(y-1, x) )           //north
@@ -295,24 +345,25 @@ public class Model extends Observable{
 	 * TODO Complete description
 	 * <br><br>
 	 * Returns true if the move is no suicide
+	 * 
 	 * @param i
 	 * @param j
 	 * @return true if the move is no suicide
 	 */
 	//TODO Change parameter names of this and similar methods from i, j to y, x
     public boolean isNoSuicide(int i, int j) {
-        int [][] boardCpy = new int[dim][dim];										//Make new board copy
-        if (hasRegionFreedom(i, j, i, j, getCurrentPlayer(), boardCpy)) {				//If the stone's region has a freedom, it isn't suicide
+        int [][] mark = new int[dim][dim];										//Mark what we find
+        if (hasRegionFreedom(i, j, i, j, getCurrentPlayer(), mark)) {				//If the stone's region has a freedom, it isn't suicide
         	return true;
         } else {																//Is it really suicide?
         																		//New board matrix for marking intersections from the view of the
         	int [][] tmp = new int[dim][dim];										//current player's opponent 
         																		//Mark the current intersection with the color of
         	tmp[i][j] = 1;														//the stone that shall be put 
-        	for (int x=0; x < dim; x++){
-        		for (int y=0; y < dim; y++){
-        			if (boardCpy[x][y] == 1){									//If it's an adjacent opponent stone
-        				if (!hasRegionFreedom(x, y, x, y, getOpponent(getCurrentPlayer()), tmp)){	//If a surrounding opponent region has no freedom,
+        	for (int y=0; y < dim; y++){
+        	    for (int x=0; x < dim; x++){
+        			if (mark[y][x] == 1){									//If it's an adjacent opponent stone
+        				if (!hasRegionFreedom(y, x, y, x, getOpponent(getCurrentPlayer()), tmp)){	//If a surrounding opponent region has no freedom,
         					return true;													//it's no suicide
         				}
         			}
@@ -330,38 +381,38 @@ public class Model extends Observable{
     }//isNoSuicide
     
     
-	
+	//TODO Highly redundant with lookAround
     /**
      * TODO Complete description
 	 * <br><br>
 	 * Returns true if the region of stone {@code [sx][sy]} of player {@code [color]} has a freedom
 	 * <p> ??? 
-     * @param sx x-coordinate of the starting intersection
-     * @param sy y-coordinate of the starting intersection
-     * @param xNow
-     * @param yNow
-     * @param color
-     * @param boardCpy
+     * 
+     * @param sx x-coordinate of the intersection on which a stone was placed (the starting intersection)
+     * @param sy y-coordinate of the intersection on which a stone was placed
+     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
+     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
+     * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible
+     * @param mark a matrix to mark what we find
      * @return
      */
-    //TODO Change parameter order from x,y to y,x so that it matches the for loops that are used when iterating over the board
-	public boolean hasRegionFreedom(int sx, int sy, int xNow, int yNow, IS color, int[][] boardCpy){
-	    if (xNow < 0 || xNow>= dim || yNow < 0 || yNow >= dim){
+	public boolean hasRegionFreedom(int sy, int sx, int yNow, int xNow, IS.State playerColor, int[][] mark){
+	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim){
 	        return false;                                //reached border of game table
-	    }else if (boardCpy[xNow][yNow] == 1 || boardCpy[xNow][yNow] == 2) {
+	    }else if (mark[yNow][xNow] == 1 || mark[yNow][xNow] == 2) {
 	    	return false;                                // already been here
-	    }else if (board[xNow][yNow].equals(getOpponent(color))){
-	    	boardCpy[xNow][yNow] = 1;					 //found adjacent stone of opponent color
+	    }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){
+	    	mark[yNow][xNow] = 1;					 //found adjacent stone of opponent color
 	    	return false;
-	    }else if (board[xNow][yNow].equals(IS.E) && (sx != xNow || sy != yNow)){
+	    }else if (board[yNow][xNow].getState().equals(IS.State.E) && (sy != yNow || sx != xNow)){
 	        return true;                                 //found a freedom which is not the starting intersection
         }else{
 
-            boardCpy[xNow][yNow] = 2;					 //found adjacent stone of this color
-            if (    (hasRegionFreedom(sx, sy, xNow, yNow-1, color, boardCpy))     // look west, north, east, south
-                 || (hasRegionFreedom(sx, sy, xNow-1, yNow, color, boardCpy))
-                 || (hasRegionFreedom(sx, sy, xNow, yNow+1, color, boardCpy)) 
-                 || (hasRegionFreedom(sx, sy, xNow+1, yNow, color, boardCpy))) {
+            mark[yNow][xNow] = 2;					 //found adjacent stone of this color
+            if (    (hasRegionFreedom(sy, sx, yNow, xNow-1, playerColor, mark))     // look west, north, east, south
+                 || (hasRegionFreedom(sy, sx, yNow-1, xNow, playerColor, mark))
+                 || (hasRegionFreedom(sy, sx, yNow, xNow+1, playerColor, mark)) 
+                 || (hasRegionFreedom(sy, sx, yNow+1, xNow, playerColor, mark))) {
 
 				return true;
             }// if
@@ -370,13 +421,16 @@ public class Model extends Observable{
     }//hasRegionFreedom
 	
 	
+	//TODO Change from empty corner/edge icon to its counterpart w/ stone and vice versa.
 	/**
 	 * TODO Complete description
 	 * <br><br>
 	 * Executes the move and tests for ko.
 	 * Returns the field in its state after the preceding move 
+	 * 
 	 * @param y
 	 * @param x
+	 * @see #lookAround
 	 */
 	public void processMove(int y, int x) {
 		//Save state of prisoners for eventual undoing
@@ -388,45 +442,53 @@ public class Model extends Observable{
 		}
 		
         cpyBoard(board, board_b4);									//Save the board state so that it can be undone later
-        board[y][x] = getCurrentPlayer();										//Put player's stone on empty intersection
-        int [][] lookField = new int [dim][dim];
-        lookAround(y, x, y, x, getCurrentPlayer(), lookField);					//Search for opponent regions to be removed							
+        //TODO Bad logic, state <> player
+        board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
+        int [][] lookBoard = new int [dim][dim];
+        lookAround(y, x, y, x, getCurrentPlayer(), lookBoard);					//Search for opponent regions to be removed							
         gamecnt++;														//Game counter is set to next player's turn
     }// processMove
     
     
-    
+	//TODO Complete description
+	//TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
+	//TODO lookAround is a really bad name for a method. Change to lookForRegion or merge with hasRegionFreedom (they are similar)
     /**
-     * TODO Complete description
      * <br><br>
+     * Central method for processing a move
      * Returns true if ???
      * <p> The current player's stone "looks around".
      * If it finds an opponent stone, the latter marks its region and finds out whether it has a freedom.
      * If its region has no freedom, the region is removed.
-     * @param sx
-     * @param sy
-     * @param xNow
-     * @param yNow
-     * @param color
-     * @param lookBoard
+     * <p> For {@code lookBoard} and {@code mark}: 0 means "found empty intersection",
+     * 1 means "found adjacent stone in the color {@code playerColor}",
+     * 2 means "found adjacent stone in the opposite color of {@code playerColor}" 
+     * 
+     * @param sx x-coordinate of the intersection on which a stone was placed (the starting intersection)
+     * @param sy y-coordinate of the intersection on which a stone was placed
+     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
+     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
+     * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
+     * @param lookBoard a matrix to mark what we find
      * @return true if ???
+     * @see #processMove
      */
-    public boolean lookAround(int sx, int sy, int xNow, int yNow, IS color, int[][] lookBoard){ //"looking board" or what?
-	    if (xNow < 0 || xNow>= dim || yNow < 0 || yNow >= dim){
+    public boolean lookAround(int sy, int sx, int yNow, int xNow, IS.State playerColor, int[][] lookBoard){ //Looking for what??
+	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim){
 	        return false;
-	    }else if (lookBoard[xNow][yNow] == 1 || lookBoard[xNow][yNow] == 2) {
+	    }else if (lookBoard[yNow][xNow] == 1 || lookBoard[yNow][xNow] == 2) {
 	    	return false;                                //Already been here
-	    }else if (board[xNow][yNow].equals(IS.E)){
+	    }else if (board[yNow][xNow].getState().equals(IS.State.E)){                     //Found an empty intersection
 	    	return false;
-	    }else if (board[xNow][yNow].equals(getOpponent(color))){				//Found adjacent stone of opponent color
-	     	int [][] tmp = new int[9][9];										//New field copy to process the move
-	     	tmp[sx][sy] = 1;
-	    	if (!hasRegionFreedom(xNow, yNow, xNow, yNow, getOpponent(color), tmp)){	//The opponent region has no freedom and is removed
-                for (int x = 0; x < dim; x++) {
-                    for (int y = 0; y < dim; y++) {
-                        if (tmp[x][y] == 2) {
-                            board[x][y] = IS.E;
-                            tmp[x][y] = 0;               
+	    }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){				//Found adjacent stone of opponent color
+	     	int [][] mark = new int[dim][dim];										    //Mark what we find
+	     	mark[sy][sx] = 1;
+	    	if (!hasRegionFreedom(yNow, xNow, yNow, xNow, getOpponent(playerColor), mark)){	//The opponent region has no freedom and is removed
+	    	    for (int y = 0; y < dim; y++) {
+	    	        for (int x = 0; x < dim; x++) {
+                        if (mark[y][x] == 2) {
+                            board[y][x].setState(IS.State.E);
+                            mark[y][x] = 0;               
 							if (gamecnt % 2 == 0) { 							//White's move
 								pris_W++; 										//White captures the removed black stone
 							} else {											//Black's move
@@ -436,24 +498,24 @@ public class Model extends Observable{
                     }//for
                 }//for
 	    	}else{														//The opponent region has a freedom and is unmarked														
-                for (int x = 0; x < dim; x++) {				//so that a region of this color can "move through" these intersections
-                	for (int y = 0; y < dim; y++) {
-                		if (tmp[x][y] == 2) {
-                			tmp[x][y] = 0;
+	    	    for (int y = 0; y < dim; y++) {                         //so that a region of this color can "move through" these intersections
+	    	        for (int x = 0; x < dim; x++) {				
+                		if (mark[y][x] == 2) {
+                			mark[y][x] = 0;
                 		}
                 	}
                 }
 	    	}
 	    	return false;
-		}else if (board[xNow][yNow].equals(color)) {
-			lookBoard[xNow][yNow] = 1; 											//Found adjacent stone of this color
+		}else if (board[yNow][xNow].getState().equals(playerColor)) {
+			lookBoard[yNow][xNow] = 1; 											//Found adjacent stone of this color
 			
-            if (    (lookAround(sx, sy, xNow, yNow-1, color, lookBoard))     						//Look west, north, east, south
-                 || (lookAround(sx, sy, xNow-1, yNow, color, lookBoard))
-                 || (lookAround(sx, sy, xNow, yNow+1, color, lookBoard)) 
-                 || (lookAround(sx, sy, xNow+1, yNow, color, lookBoard))) {
+            if (    (lookAround(sy, sx, yNow, xNow-1, playerColor, lookBoard))     						//Look west, north, east, south
+                 || (lookAround(sy, sx, yNow-1, xNow, playerColor, lookBoard))
+                 || (lookAround(sy, sx, yNow, xNow+1, playerColor, lookBoard)) 
+                 || (lookAround(sy, sx, yNow+1, xNow, playerColor, lookBoard))) {
 
-   				return true;
+   				return true; //Can never be reached?
             }// if
             return false;
 		}//if
@@ -469,8 +531,8 @@ public class Model extends Observable{
 		if (gamecnt > 1 ){							//If it's the first move, there's nothing to be undone
 		    
 			cpyBoard(board_b4, board);			//Copy array fields before -> fields				
-
-			if (getCurrentPlayer().equals(IS.B)){			//Depending on the player whose turn it was, his latest prisoners are undone
+			
+			if (getCurrentPlayer().equals(IS.State.B)){			//Depending on the player whose turn it was, his latest prisoners are undone
 				this.pris_W = this.pris_W_b4;							
 			}else{
 				this.pris_B = this.pris_B_b4;				
@@ -489,6 +551,7 @@ public class Model extends Observable{
 	 * If {@code board} and {@code board_b4} are already equal, it's not allowed to undo your move.
 	 * Used to find out whether it is a KO-situation.
 	 * If {@code board} and {@code tmp_4_ko} are equal, the move reproduces the preceding state of the board and therefore isn't allowed.
+     * 
      * @param one one {@code IS[][]} board state
      * @param other the other
      * @return true if two {@code IS[][]} board states are equal with respect to the values of the boards' {@code IS} intersections. 
@@ -503,10 +566,10 @@ public class Model extends Observable{
             }
         }
         return true;
-    }//areEqualFields
+    }//areBoardsEqual
     
     
-    //TODO Passing: Display waiting dialog after passing (instead of "Bitte warten Sie bis Sie an der Reihe sind")
+    //TODO Passing: Display waiting dialog after passing (instead of "Please wait your turn")
     /**
      * Pass a draw
      */
@@ -526,13 +589,14 @@ public class Model extends Observable{
     
     /**
      * Returns true if the draw that is being processed is a double pass.
+     * 
      * @return true if the draw that is being processed is a double pass
      */
     public boolean isDoublePass(){
     	int pris_tmp;
     	int pris_tmp_b4;
     	
-    	if (getCurrentPlayer().equals(IS.B)){
+    	if (getCurrentPlayer().equals(IS.State.B)){
     		pris_tmp = pris_B;
     		pris_tmp_b4 = pris_B_b4;
     	}else{
@@ -551,12 +615,13 @@ public class Model extends Observable{
     
     /**
      * Returns true if the player is trying to put his stone on an empty intersection.
-     * @param i 
-     * @param j
+     * 
+     * @param y 
+     * @param x
      * @return true if the player is trying to put his stone on an empty intersection
      */
-	public boolean isEmptyIntersection(int i, int j){
-	    if (board[i][j] == IS.E) {    
+	public boolean isEmptyIntersection(int y, int x){
+	    if (board[y][x].getState() == IS.State.E) {    
 	        return true;
 	    }else{
 	        return false;
@@ -567,14 +632,15 @@ public class Model extends Observable{
 	/**
 	 * TODO Complete description
 	 * <br><br>
-	 * Copy the whole board while either processing or undoing a move. Purpose ??? 
+	 * Copy the whole board. Used while either processing or undoing a move as well as in initialization 
+	 * 
 	 * @param src
 	 * @param dest
 	 */
 	public void cpyBoard(IS[][] src, IS[][] dest){
-        for (int i=0; i < dim; i++){
-            for (int j=0; j < dim; j++){
-                dest[i][j] = src[i][j];
+        for (int y=0; y < dim; y++){
+            for (int x=0; x < dim; x++){
+                dest[y][x] = src[y][x];
             }            
         }
     }//cpyField
@@ -587,6 +653,29 @@ public class Model extends Observable{
     public void notifyObservers2(Object updateMessage){
         notifyObservers(updateMessage);
     }//notifyObservers2
-	
+    
+    private String boardToString(IS[][]board){
+        StringBuffer results = new StringBuffer();
+        String separator = " ";
+
+        for (int y = 0; y < dim; ++y){
+            if (y > 0)
+                results.append('\n');
+            for (int x = 0; x < dim; ++x){
+              results.append(board[y][x]).append(separator);
+          }
+        }
+        return results.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "\nModel [lan=" + lan + ", player=" + player + ", ter_B=" + ter_B + ", ter_W=" + ter_W + ", pris_B="
+                + pris_B + ", pris_W=" + pris_W + ", pris_B_b4=" + pris_B_b4 + ", pris_W_b4=" + pris_W_b4 + ", gamecnt="
+                + gamecnt + ",\nboard=\n" + boardToString(board) + ",\nboard_b4=\n" + boardToString(board_b4)
+                + ",\ntmp_4_ko=\n" + boardToString(tmp_4_ko) + ",\nboardCpy=\n" + Arrays.toString(mark)
+                + ",\nblackRegion=" + blackRegion + ", whiteRegion=" + whiteRegion + ", currentRegion=" + currentRegion
+                + ", dim=" + dim + "]\n";
+    }
 
 }//Model
