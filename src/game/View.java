@@ -107,10 +107,25 @@ public class View implements Observer{
         }//actionPerformed
     }//FieldButtonActionListener
     
+    private void displayResults(){
+        String result;
+        int scrB = model.getScr_B();    //Black's score
+        int scrW = model.getScr_W();    //White's score
+        
+        if (scrB > scrW){
+            result = String.format("Black wins with %d to %d points!", scrB, scrW);
+        }else if (scrW > scrB){
+            result = String.format("White wins with %d to %d points!", scrW, scrB);
+        }else{
+            result = String.format("Draw!", scrW, scrB);
+        }
+        JOptionPane.showMessageDialog(gameWindow, result);
+    }
+    
     //TODO Replace these model calls with one call... Gross! 
     private class PassButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            if ( !model.isDoublePass() ){
+            if ( !model.isDoublePass() ){                       //It's a regular pass (no double pass)
                 model.pass();
                 updateScorePanel(); 
                 model.send(Constants.SEND_PASS);
@@ -120,21 +135,10 @@ public class View implements Observer{
             }else{												//Both players passed, game is over
                 model.pass();
                 updateScorePanel();
-                String result;
-                int scrB = model.getScr_B();	//Black's score
-                int scrW = model.getScr_W();	//White's score
-                
-                if (scrB > scrW){
-                    result = String.format("Black wins with %d to %d points!", scrB, scrW);
-                }else if (scrW > scrB){
-                    result = String.format("White wins with %d to %d points!", scrW, scrB);
-                }else{
-                    result = String.format("Draw!", scrW, scrB);
-                }
-                JOptionPane.showMessageDialog(gameWindow, result);
-                model.send(Constants.SEND_PASS);
+                displayResults();
+                model.send(Constants.SEND_DOUBLEPASS);
                 gameWindow.dispose();
-                }
+            }
         }//actionPerformed
     }//PassButtonActionListener
     
@@ -174,8 +178,8 @@ public class View implements Observer{
     JFrame gameWindow;
     JSplitPane splitPane;
     
-    JPanel board; //The Go board / table
-    BoardButton[][] boardButtons;
+    JPanel boardPanel;     //Holds all the UI components
+    BoardButton[][] board; //The UI counterpart of 'board' in Model; has a button for each intersection
 
     //Inner intersections
     ImageIcon intersct = new ImageIcon("icons/Intersct.jpg");
@@ -246,11 +250,11 @@ public class View implements Observer{
         splitPane = new JSplitPane (JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setDividerSize(0);
         
-            board = new JPanel();
-            board.setLayout( new GridLayout (dim,dim) );
-            board.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            boardPanel = new JPanel();
+            boardPanel.setLayout( new GridLayout (dim,dim) );
+            boardPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
             
-                boardButtons = new BoardButton[dim][dim];
+                board = new BoardButton[dim][dim];
                 
                 //TODO Remove redundancy or incorporate setting corner and edge icons here
                 //TODO Also, redundant vs what is done in Model
@@ -258,35 +262,35 @@ public class View implements Observer{
                 //Also set center icons
                 for (int y=0; y<dim; y++){
                     for (int x=0; x<dim; x++){
-                        boardButtons[y][x] = new BoardButton(intersct, y, x);
-                        boardButtons[y][x].addActionListener( new BoardButtonActionListener() );
-                        boardButtons[y][x].setBorder(BorderFactory.createEmptyBorder());
-                        board.add(boardButtons[y][x]);      
+                        board[y][x] = new BoardButton(intersct, y, x);
+                        board[y][x].addActionListener( new BoardButtonActionListener() );
+                        board[y][x].setBorder(BorderFactory.createEmptyBorder());
+                        boardPanel.add(board[y][x]);      
                     }//for
                 }//for
                 
                 //Set corner icons
-                boardButtons[0][0].setIcon(intersct_crnTL);
-                boardButtons[0][dim-1].setIcon(intersct_crnTR);
-                boardButtons[dim-1][0].setIcon(intersct_crnBL);
-                boardButtons[dim-1][dim-1].setIcon(intersct_crnBR);
+                board[0][0].setIcon(intersct_crnTL);
+                board[0][dim-1].setIcon(intersct_crnTR);
+                board[dim-1][0].setIcon(intersct_crnBL);
+                board[dim-1][dim-1].setIcon(intersct_crnBR);
                 
                 
                 //Set edge icons
                 for (int x=1; x<dim-1; x++){
-                    boardButtons[0][x].setIcon(intersct_edgT);
+                    board[0][x].setIcon(intersct_edgT);
                 }
                 for (int y=1; y<dim-1; y++){
-                    boardButtons[y][0].setIcon(intersct_edgL);
+                    board[y][0].setIcon(intersct_edgL);
                 }
                 for (int y=1; y<dim-1; y++){
-                    boardButtons[y][dim-1].setIcon(intersct_edgR);
+                    board[y][dim-1].setIcon(intersct_edgR);
                 }
                 for (int x=1; x<dim-1; x++){
-                    boardButtons[dim-1][x].setIcon(intersct_edgB);
+                    board[dim-1][x].setIcon(intersct_edgB);
                 }
                 
-        splitPane.add(board);
+        splitPane.add(boardPanel);
             
             scorePanel = new JPanel();
             scorePanel.setLayout( new GridLayout (5,3) );
@@ -480,7 +484,7 @@ public class View implements Observer{
     private void updateBoard(){
         for (int y=0; y<dim; y++) {
         	for (int x=0; x<dim; x++) {
-        	    boardButtons[y][x].setIcon(getBoardButtonIcon(y, x));
+        	    board[y][x].setIcon(getBoardButtonIcon(y, x));
         	}
         }
     }//updatePlayingField
@@ -510,8 +514,18 @@ public class View implements Observer{
             choose.dispose();
             System.out.println("View: update: Disposed choose");
             waiting.setVisible(true);
-        }else if (arg1.equals(UpdateMessages.DRAW_RECVD)){
-            System.out.println("View: update: DRAW_RECVD: " + Thread.currentThread().getName());
+        }else if (arg1.equals(UpdateMessages.RECVD_PASS)){
+            System.out.println("View: update: RECVD_PASS: " + Thread.currentThread().getName());
+            waiting.setVisible(false);
+            updateScorePanel();    
+        }else if (arg1.equals(UpdateMessages.RECVD_DOUBLEPASS)){
+            System.out.println("View: update: RECVD_DOUBLEPASS: " + Thread.currentThread().getName());
+            waiting.setVisible(false);
+            updateScorePanel();
+            displayResults();
+            gameWindow.dispose();
+        }else if (arg1.equals(UpdateMessages.RECVD_MOVE)){
+            System.out.println("View: update: RECVD_MOVE: " + Thread.currentThread().getName());
             waiting.setVisible(false);
             updateBoard();
             updateScorePanel();

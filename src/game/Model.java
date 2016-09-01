@@ -130,13 +130,20 @@ public class Model extends Observable{
             if (recv == Constants.SEND_PASS){
                 System.out.println("Model: receive: Received pass");
                 pass();
+                setChanged();
+                notifyObservers(UpdateMessages.RECVD_PASS);
+            }else if (recv == Constants.SEND_DOUBLEPASS){
+                System.out.println("Model: receive: Received double pass");
+                pass();
+                setChanged();
+                notifyObservers(UpdateMessages.RECVD_DOUBLEPASS);
             }else{
                 int y = recv / dim;
                 int x = recv - dim*y;
                 processMove(y, x);
+                setChanged();
+                notifyObservers(UpdateMessages.RECVD_MOVE);
             }
-            setChanged();
-            notifyObservers(UpdateMessages.DRAW_RECVD);
 	    } catch (IOException e) {
 	        // TODO Auto-generated catch block
 	        e.printStackTrace();
