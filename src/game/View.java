@@ -58,16 +58,34 @@ public class View implements Observer{
         }
     }//GameWindowListener
     
+    
+    private void recv_wait(){
+        //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
+        //makes his draw.
+        SwingWorker worker = new SwingWorker(){
+            @Override
+            protected Object doInBackground() throws Exception {
+                model.receive();
+                return null;
+            }
+        };
+        worker.execute();
+        //Meant to hinder player from entering input until it's his turn again
+        //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
+        //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
+        waiting.setVisible(true);
+    }
+    
     private class BoardButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             BoardButton bb = (BoardButton) e.getSource();
             if (model.isEmptyIntersection(bb.y, bb.x)){
                 if (model.isNoSuicide(bb.y, bb.x) ){
+                    System.out.println("\nView: BBAL: Draw #" + model.getGamecnt());
                     model.processMove(bb.y, bb.x);
-                    if ( (model.areBoardsEqual(model.getIntersections(), model.getTmp_4_ko())) && (model.getGamecnt() > 8) ){
+                    if ( (model.areBoardsEqual(model.getBoard(), model.getBoard_ko())) && (model.getGamecnt() > 8) ){
                         phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
-//                        JOptionPane.showMessageDialog(gameWindow, "A stone that struck an opposing stone cannot be struck right afterwards!");
-                        model.undoMove();
+                        model.undo();
                     }else{
                     	updateBoard();
                     	updateScorePanel();
@@ -77,40 +95,29 @@ public class View implements Observer{
                         model.send((bb.y*dim) + bb.x); //something in [0,dim*dim-1]
                         System.out.println("View: BBAL: Sent draw to opponent.");
                         System.out.println("View: BBAL: Going to wait for opponent's draw...");
-						//Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
-                        //makes his draw.
-                        SwingWorker worker = new SwingWorker(){
-							@Override
-							protected Object doInBackground() throws Exception {
-								model.receive();
-								return null;
-							}
-                        };
-                        worker.execute();
-                        //Meant to hinder player from entering input until it's his turn again
-                        //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
-                        //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
-                        waiting.setVisible(true); 
+                        recv_wait();
                     }
                 }else{
                     //TODO Make another label / text field for these notifications
                     phase.setText("That would be suicide!");
-//                    JOptionPane.showMessageDialog(gameWindow, "Suicide is not allowed!");
                 }
             }else{
                 phase.setText("Please choose an empty intersection!");
-//                JOptionPane.showMessageDialog(gameWindow, "Please choose an empty intersection!");
             }
         }//actionPerformed
     }//FieldButtonActionListener
     
+    //TODO Replace these model calls with one call... Gross! 
     private class PassButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             if ( !model.isDoublePass() ){
                 model.pass();
                 updateScorePanel(); 
-                model.send(-1);
-            }else{												//Here the game is over!
+                model.send(Constants.SEND_PASS);
+                System.out.println("View: PBAL: Sent pass to opponent.");
+                System.out.println("View: PBAL: Going to wait for opponent's draw...");
+                recv_wait();
+            }else{												//Game will be over
                 model.pass();
                 updateScorePanel();
                 String result;
@@ -131,21 +138,20 @@ public class View implements Observer{
         }//actionPerformed
     }//PassButtonActionListener
     
-    //TODO Undoing a move does not work properly
+    //TODO Implement a phase for deciding on a local draw (including an undo button) and add a 'Send' button
+    //TODO Start implementing MVC cleaner: For now, just call model.undo() (still dirty but hey). Then let the model notify the View, and if, for instance, the move was already undone, display a notification on the board. Do this for pass button and everywhere else, too. 
     private class UndoButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             if (model.getGamecnt() > 1){
-                if (model.areBoardsEqual(model.getIntersections(), model.getIntersections_b4())){
+                if (model.areBoardsEqual(model.getBoard(), model.getBoard_b4())){
                     phase.setText("You can only undo one move!");
-//                	JOptionPane.showMessageDialog(gameWindow, "You can only undo one move!");
                 }else{
-                	model.undoMove();
+                	model.undo();
                 	updateBoard();
                 	updateScorePanel();                                                        
                 }
             }else{
                 phase.setText("There's no move that can be undone!");
-//                JOptionPane.showMessageDialog(gameWindow, "There's no move that can be undone!");
             }
         }//actionPerformed
     }//UndoButtonActionListener
@@ -362,6 +368,7 @@ public class View implements Observer{
         join = new JButton("Join (Black):");
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
+        //TODO Outsource this address to development branch and create release with empty text field
         server_addr.setText("192.168.178.25");  //TODO Remove this line at the end
         conn_info_client = new JLabel("");
         ActionListener srvAddrList = new ActionListener() { //Create a listener for the server address

@@ -22,6 +22,8 @@ import multiplayer.UpdateMessages;
 
 //TODO Sometimes I'm using ==, sometimes .equals. Fix that!
 
+//TODO At the beginning, provide options: local multiplayer or multiplayer (and at some point maybe singleplayer)
+
 /**
  * The data and logic for the game. In Go Black plays against White. 
  * The game is played on a square board that consists of intersections that are either empty
@@ -32,7 +34,6 @@ import multiplayer.UpdateMessages;
 public class Model extends Observable{
     
     private LAN_Conn lan;       //Server or client
-    private Player player;         //Black or White
     private int ter_B;                    //Territory occupied by Black
     private int ter_W;                    //Territory occupied by White
     private int pris_B = 0;                    //Conquered opponent stones of Black
@@ -45,14 +46,14 @@ public class Model extends Observable{
      * 
      * <p>TODO Also used for something else (like comparing board states)? Maybe there's a better solution. 
      */
-	private int gamecnt;
+	private int gameCnt;
 	/**
 	 * The state of the board represented by the state of its intersections.
 	 * (0,0) is the top left corner of the board.
 	 */
 	private IS[][] board;
-	private IS[][] board_b4;			 	//The preceding state of the board
-	private IS[][] tmp_4_ko;				//Saves the state of intersections_b4 while testing on illegal move in KO-situation
+	private IS[][] board_b4;			 	//Board before, the preceding state of the board
+	private IS[][] board_ko;				//Saves the state of board_b4 while testing on illegal move in "ko"-situation
 	int[][] mark;                            //Used to mark regions of each player
 	boolean blackRegion;
 	boolean whiteRegion;
@@ -61,10 +62,10 @@ public class Model extends Observable{
 	
 	//TODO Quite some things done in constructor. Outsource creation of the intersections to an init() method?
 	public Model(){
-		gamecnt = 1;                    //The game starts at draw #1
+		gameCnt = 1;                    //The game starts at draw #1
 		board = new IS[dim][dim];		//Create board with empty intersections
 		board_b4 = new IS[dim][dim];	//Copy of the board for undoing moves
-		tmp_4_ko = new IS[dim][dim];	//New KO-test board
+		board_ko = new IS[dim][dim];	//New KO-test board
 		
 		IS is;                          //Used for initializing intersections
 		//TODO Redundant vs what is done in View?
@@ -125,13 +126,14 @@ public class Model extends Observable{
 	    try {
 	        System.out.println("Model: receive: Call to receive");
             int recv = lan.receive();
-            System.out.println("Model: receive: Return from receive");
-            if (recv == -1){
-                //TODO Passing: Carry out opponent's pass draw locally
+            System.out.println("Model: receive: Return from receive. recv: " + recv);
+            if (recv == Constants.SEND_PASS){
+                System.out.println("Model: receive: Received pass");
+                pass();
             }else{
                 int y = recv / dim;
                 int x = recv - dim*y;
-                this.processMove(y, x);
+                processMove(y, x);
             }
             setChanged();
             notifyObservers(UpdateMessages.DRAW_RECVD);
@@ -166,33 +168,14 @@ public class Model extends Observable{
 	public void setLAN_Role(String server_address){
 	    if (server_address.equals("")){
 	        this.lan = new Server(this);
-	        this.player = Player.WHITE;
 	    }else{
 	        this.lan = new Client(this, server_address);
-	        this.player = Player.BLACK;
 	    }
 	}//setLAN_Role
 	
-	/**
-	 * Returns true if it's the calling player's turn.
-	 * 
-	 * @return true if it's the calling player's turn.
-	 */
-	public boolean isMyTurn(){
-	    if ( player.equals(Player.BLACK) && getCurrentPlayer().equals(IS.State.B)
-          || player.equals(Player.WHITE) && getCurrentPlayer().equals(IS.State.W)){
-	        return true;
-	    }else{
-	        return false;
-	    }
-	}//isMyTurn
-	
-	public Player getPlayer(){
-	    return player;
-	}//getPlayer
 	
 	public int getGamecnt() {
-	    return gamecnt;
+	    return gameCnt;
 	}//getGamecnt
 	
     public IS getIntersection(int y, int x) {
@@ -204,8 +187,8 @@ public class Model extends Observable{
     }//getCpyIntersection
     
     //TODO This doesn't return the Player but the "color of the stone on an intersection"(?!?!) -> Either change return type to Player or create Enum Stone that doesn't contain E (empty)  
-    private IS.State getCurrentPlayer(){       //Getting the color of the player whose turn it is
-        if (gamecnt % 2 == 0){
+    public IS.State getCurrentPlayer(){       //Getting the color of the player whose turn it is
+        if (gameCnt % 2 == 0){
             return IS.State.W;
         }else{
             return IS.State.B;
@@ -213,7 +196,7 @@ public class Model extends Observable{
     }//getPlayer
     
     //TODO Currently this doesn't get the opponent but the state of the intersection (which could also be empty but let's hope it's never). Either change return type to Player(color) or change the way it is called/used!
-    private IS.State getOpponent(IS.State state){       //Gets the color of the specified color's opponent
+    public IS.State getOpponent(IS.State state){       //Gets the color of the specified color's opponent
         if (state == IS.State.W){
             return IS.State.B;
         }else if(state == IS.State.B){
@@ -224,16 +207,16 @@ public class Model extends Observable{
         }
     }//getOpponent
 
-    public IS[][] getIntersections() {
+    public IS[][] getBoard() {
         return board;
     }//getFields
 
-    public IS[][] getIntersections_b4() {
+    public IS[][] getBoard_b4() {
         return board_b4;
     }//getFields_b4
     
-    public IS[][] getTmp_4_ko(){
-    	return tmp_4_ko;
+    public IS[][] getBoard_ko(){
+    	return board_ko;
     }//getTmp_4_ko
 
     public int getTer_B() {
@@ -265,7 +248,7 @@ public class Model extends Observable{
 	 * Get both players' territory on the board
      */
 	public void getTerritory(){
-		mark = new int[dim][dim];                 //Create a copy of the Go board to mark empty intersections
+		mark = new int[dim][dim];                 //Create a copy of the board to mark empty intersections
 		ter_B = 0;
 	    ter_W = 0;
 	    currentRegion = 0;						  //Number of current region (1-81)
@@ -295,6 +278,7 @@ public class Model extends Observable{
 	}//getTerritory
 
 	
+	//TODO Redundant with lookAround and hasRegionFreedom???
 	/**
 	 * TODO Complete description
 	 * <br><br>
@@ -310,10 +294,10 @@ public class Model extends Observable{
 	        return false;	                        //Reached border of game table
 		}else if ( mark[y][x] > 0 ){
 	    	return false;        					//Found already marked field ( >0 = a region, -1 = black stone, -2 = white stone)
-		}else if ( mark[y][x] == -1 ){
+		}else if ( mark[y][x] == -1 ){              //TODO ???
 			blackRegion = true;
 			return false;
-		}else if ( mark[y][x] == -2 ){
+		}else if ( mark[y][x] == -2 ){              //TODO ???
 			whiteRegion = true;
 			return false;
 	    }else if ( board[y][x].getState().equals(IS.State.B) ){    
@@ -381,7 +365,7 @@ public class Model extends Observable{
     }//isNoSuicide
     
     
-	//TODO Highly redundant with lookAround
+    //TODO Redundant with lookAround and markRegion???
     /**
      * TODO Complete description
 	 * <br><br>
@@ -421,7 +405,7 @@ public class Model extends Observable{
     }//hasRegionFreedom
 	
 	
-	//TODO Change from empty corner/edge icon to its counterpart w/ stone and vice versa.
+	//TODO Change from empty corner/edge icon to its counterpart with stone and vice versa.
 	/**
 	 * TODO Complete description
 	 * <br><br>
@@ -433,12 +417,12 @@ public class Model extends Observable{
 	 * @see #lookAround
 	 */
 	public void processMove(int y, int x) {
-		//Save state of prisoners for eventual undoing
+		//Save state of prisoners in case the draw is undone
 		this.pris_W_b4 = this.pris_W;
 		this.pris_B_b4 = this.pris_B;
         
 		if (!areBoardsEqual(board_b4, board)){
-			cpyBoard(board_b4, tmp_4_ko);								//Save a copy of board_b4 for testing on illegal move in "ko"-situation
+			cpyBoard(board_b4, board_ko);								//Save a copy of board_b4 for testing on illegal move in "ko"-situation
 		}
 		
         cpyBoard(board, board_b4);									//Save the board state so that it can be undone later
@@ -446,14 +430,14 @@ public class Model extends Observable{
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
         int [][] lookBoard = new int [dim][dim];
         lookAround(y, x, y, x, getCurrentPlayer(), lookBoard);					//Search for opponent regions to be removed							
-        gamecnt++;														//Game counter is set to next player's turn
+        gameCnt++;														//Game counter is set to next player's turn
     }// processMove
     
     
-	//TODO Complete description
 	//TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
 	//TODO lookAround is a really bad name for a method. Change to lookForRegion or merge with hasRegionFreedom (they are similar)
     /**
+     * TODO Complete description
      * <br><br>
      * Central method for processing a move
      * Returns true if ???
@@ -489,7 +473,7 @@ public class Model extends Observable{
                         if (mark[y][x] == 2) {
                             board[y][x].setState(IS.State.E);
                             mark[y][x] = 0;               
-							if (gamecnt % 2 == 0) { 							//White's move
+							if (gameCnt % 2 == 0) { 							//White's move
 								pris_W++; 										//White captures the removed black stone
 							} else {											//Black's move
 								pris_B++; 										//Black captures the removed white stone
@@ -524,22 +508,21 @@ public class Model extends Observable{
 
 	
     /**
-     * TODO Write description
-     * <br><br>
+     * Undoes the last draw
      */
-    public void undoMove(){
-		if (gamecnt > 1 ){							//If it's the first move, there's nothing to be undone
+    public void undo(){
+		if (gameCnt > 1 ){							//If it's the first move, there's nothing to be undone
 		    
-			cpyBoard(board_b4, board);			//Copy array fields before -> fields				
+			cpyBoard(board_b4, board);							
 			
 			if (getCurrentPlayer().equals(IS.State.B)){			//Depending on the player whose turn it was, his latest prisoners are undone
 				this.pris_W = this.pris_W_b4;							
 			}else{
 				this.pris_B = this.pris_B_b4;				
 			}
-			gamecnt--;								//Set game count to last turn
+			gameCnt--;								//Set game count to last turn
 		}
-	}//undoMove
+	}//undo
 	
 
     /**
@@ -569,21 +552,20 @@ public class Model extends Observable{
     }//areBoardsEqual
     
     
-    //TODO Passing: Display waiting dialog after passing (instead of "Please wait your turn")
     /**
      * Pass a draw
      */
     public void pass() {
-    	cpyBoard(board, board_b4);
-        if (this.gamecnt % 2 == 0) { //White passes
+        cpyBoard(board, board_b4); //TODO Still need this in distributed multiplayer mode??? 
+        if (this.gameCnt % 2 == 0) { //White passes
             this.pris_B_b4 = this.pris_B;
-            this.pris_B++; //and black receives a prisoner point
-
+            this.pris_B++; //and Black receives a prisoner point
+            
         } else { //Black passes
             this.pris_W_b4 = this.pris_W;
-            this.pris_W++; //and white receives a prisoner point
+            this.pris_W++; //and White receives a prisoner point
         }
-        this.gamecnt++;
+        this.gameCnt++;
     }//pass
     
     
@@ -670,10 +652,10 @@ public class Model extends Observable{
 
     @Override
     public String toString() {
-        return "\nModel [lan=" + lan + ", player=" + player + ", ter_B=" + ter_B + ", ter_W=" + ter_W + ", pris_B="
+        return "\nModel [lan=" + lan + ", ter_B=" + ter_B + ", ter_W=" + ter_W + ", pris_B="
                 + pris_B + ", pris_W=" + pris_W + ", pris_B_b4=" + pris_B_b4 + ", pris_W_b4=" + pris_W_b4 + ", gamecnt="
-                + gamecnt + ",\nboard=\n" + boardToString(board) + ",\nboard_b4=\n" + boardToString(board_b4)
-                + ",\ntmp_4_ko=\n" + boardToString(tmp_4_ko) + ",\nboardCpy=\n" + Arrays.toString(mark)
+                + gameCnt + ",\nboard=\n" + boardToString(board) + ",\nboard_b4=\n" + boardToString(board_b4)
+                + ",\ntmp_4_ko=\n" + boardToString(board_ko) + ",\nboardCpy=\n" + Arrays.toString(mark)
                 + ",\nblackRegion=" + blackRegion + ", whiteRegion=" + whiteRegion + ", currentRegion=" + currentRegion
                 + ", dim=" + dim + "]\n";
     }
