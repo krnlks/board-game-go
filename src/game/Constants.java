@@ -2,7 +2,6 @@ package game;
 
 /**
  * Constants for the game
- * @author Lukas Kern
  */
 public class Constants {
     /**

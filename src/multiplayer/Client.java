@@ -45,6 +45,7 @@ public class Client extends LAN_Conn{
     
     /**
      * Creates the {@code socket} and connects it to {@code SERVER_PORT} on host with address {@code server_addr}
+     * 
      * @throws IOException
      */
     public void init() throws Exception {
