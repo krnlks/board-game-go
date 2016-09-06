@@ -146,17 +146,17 @@ public class View implements Observer{
     //TODO Start implementing MVC cleaner: For now, just call model.undo() (still dirty but hey). Then let the model notify the View, and if, for instance, the move was already undone, display a notification on the board. Do this for pass button and everywhere else, too. 
     private class UndoButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            if (model.getGamecnt() > 1){
-                if (model.areBoardsEqual(model.getBoard(), model.getBoard_b4())){
-                    phase.setText("You can only undo one move!");
-                }else{
-                	model.undo();
-                	updateBoard();
-                	updateScorePanel();                                                        
-                }
-            }else{
-                phase.setText("There's no move that can be undone!");
-            }
+//            if (model.getGamecnt() > 1){
+//                if (model.areBoardsEqual(model.getBoard(), model.getBoard_b4())){
+//                    phase.setText("You can only undo one move!");
+//                }else{
+//                	model.undo();
+//                	updateBoard();
+//                	updateScorePanel();                                                        
+//                }
+//            }else{
+//                phase.setText("There's no move that can be undone!");
+//            }
         }//actionPerformed
     }//UndoButtonActionListener
     
@@ -184,41 +184,59 @@ public class View implements Observer{
     //Inner intersections
     ImageIcon intersct = new ImageIcon("icons/Intersct.jpg");
     ImageIcon intersct_B = new ImageIcon("icons/Intersct_B.jpg");
+    ImageIcon intersct_BL = new ImageIcon("icons/Intersct_BL.jpg");
     ImageIcon intersct_W = new ImageIcon("icons/Intersct_W.jpg");
+    ImageIcon intersct_WL = new ImageIcon("icons/Intersct_WL.jpg");
     
     //Board corners
     ImageIcon intersct_crnTL = new ImageIcon("icons/Intersct_crnTL.jpg");
     ImageIcon intersct_crnTL_B = new ImageIcon("icons/Intersct_crnTL_B.jpg");
+    ImageIcon intersct_crnTL_BL = new ImageIcon("icons/Intersct_crnTL_BL.jpg");
     ImageIcon intersct_crnTL_W = new ImageIcon("icons/Intersct_crnTL_W.jpg");
+    ImageIcon intersct_crnTL_WL = new ImageIcon("icons/Intersct_crnTL_WL.jpg");
 
     ImageIcon intersct_crnTR = new ImageIcon("icons/Intersct_crnTR.jpg");
     ImageIcon intersct_crnTR_B = new ImageIcon("icons/Intersct_crnTR_B.jpg");
+    ImageIcon intersct_crnTR_BL = new ImageIcon("icons/Intersct_crnTR_BL.jpg");
     ImageIcon intersct_crnTR_W = new ImageIcon("icons/Intersct_crnTR_W.jpg");
+    ImageIcon intersct_crnTR_WL = new ImageIcon("icons/Intersct_crnTR_WL.jpg");
 
     ImageIcon intersct_crnBL = new ImageIcon("icons/Intersct_crnBL.jpg");
     ImageIcon intersct_crnBL_B = new ImageIcon("icons/Intersct_crnBL_B.jpg");
+    ImageIcon intersct_crnBL_BL = new ImageIcon("icons/Intersct_crnBL_BL.jpg");
     ImageIcon intersct_crnBL_W = new ImageIcon("icons/Intersct_crnBL_W.jpg");
+    ImageIcon intersct_crnBL_WL = new ImageIcon("icons/Intersct_crnBL_WL.jpg");
     
     ImageIcon intersct_crnBR = new ImageIcon("icons/Intersct_crnBR.jpg");
     ImageIcon intersct_crnBR_B = new ImageIcon("icons/Intersct_crnBR_B.jpg");
+    ImageIcon intersct_crnBR_BL = new ImageIcon("icons/Intersct_crnBR_BL.jpg");
     ImageIcon intersct_crnBR_W = new ImageIcon("icons/Intersct_crnBR_W.jpg");
+    ImageIcon intersct_crnBR_WL = new ImageIcon("icons/Intersct_crnBR_WL.jpg");
     
     //Board edges
     ImageIcon intersct_edgT = new ImageIcon("icons/Intersct_edgT.jpg");
     ImageIcon intersct_edgT_B = new ImageIcon("icons/Intersct_edgT_B.jpg");
+    ImageIcon intersct_edgT_BL = new ImageIcon("icons/Intersct_edgT_BL.jpg");
     ImageIcon intersct_edgT_W = new ImageIcon("icons/Intersct_edgT_W.jpg");
+    ImageIcon intersct_edgT_WL = new ImageIcon("icons/Intersct_edgT_WL.jpg");
 
     ImageIcon intersct_edgL = new ImageIcon("icons/Intersct_edgL.jpg");
     ImageIcon intersct_edgL_B = new ImageIcon("icons/Intersct_edgL_B.jpg");
+    ImageIcon intersct_edgL_BL = new ImageIcon("icons/Intersct_edgL_BL.jpg");
     ImageIcon intersct_edgL_W = new ImageIcon("icons/Intersct_edgL_W.jpg");
+    ImageIcon intersct_edgL_WL = new ImageIcon("icons/Intersct_edgL_WL.jpg");
     
     ImageIcon intersct_edgR = new ImageIcon("icons/Intersct_edgR.jpg");
     ImageIcon intersct_edgR_B = new ImageIcon("icons/Intersct_edgR_B.jpg");
+    ImageIcon intersct_edgR_BL = new ImageIcon("icons/Intersct_edgR_BL.jpg");
     ImageIcon intersct_edgR_W = new ImageIcon("icons/Intersct_edgR_W.jpg");
+    ImageIcon intersct_edgR_WL = new ImageIcon("icons/Intersct_edgR_WL.jpg");
 
     ImageIcon intersct_edgB = new ImageIcon("icons/Intersct_edgB.jpg");
     ImageIcon intersct_edgB_B = new ImageIcon("icons/Intersct_edgB_B.jpg");
+    ImageIcon intersct_edgB_BL = new ImageIcon("icons/Intersct_edgB_BL.jpg");
     ImageIcon intersct_edgB_W = new ImageIcon("icons/Intersct_edgB_W.jpg");
+    ImageIcon intersct_edgB_WL = new ImageIcon("icons/Intersct_edgB_WL.jpg");
 
     
     JPanel scorePanel;
@@ -412,10 +430,12 @@ public class View implements Observer{
     
     
     private ImageIcon getBoardButtonIcon(int y, int x){
-        //TODO I should not access the Model directly as I do here
+        //TODO Not very urgent: I should not access the Model directly as I do here
+        //TODO include "last" into differentiation
         IS is = model.getIntersection(y, x);
         IS.Orient orient= is.getOrient();
         IS.State state = is.getState();
+        boolean wasPutLast = is.wasPutLast();
         
         if (state.equals(IS.State.E)){            //Empty
             if (orient.equals(IS.Orient.C)){     //Center
@@ -438,44 +458,88 @@ public class View implements Observer{
                 return intersct_crnBR;
             }
         }else if (state.equals(IS.State.B)){      //Black
-            if (orient.equals(IS.Orient.C)){     //Center
-                return intersct_B;
-            }else if(orient.equals(IS.Orient.T)){ //Top
-                return intersct_edgT_B;
-            }else if(orient.equals(IS.Orient.L)){ //Left
-                return intersct_edgL_B;
-            }else if(orient.equals(IS.Orient.R)){ //Right
-                return intersct_edgR_B;
-            }else if(orient.equals(IS.Orient.B)){ //Bottom
-                return intersct_edgB_B;
-            }else if(orient.equals(IS.Orient.TL)){ //Top left
-                return intersct_crnTL_B;
-            }else if(orient.equals(IS.Orient.TR)){ //Top right
-                return intersct_crnTR_B;
-            }else if(orient.equals(IS.Orient.BL)){ //Bottom left
-                return intersct_crnBL_B;
-            }else{                                 //Bottom right
-                return intersct_crnBR_B;
+            if (wasPutLast){                        //Stone was put last                        
+                if (orient.equals(IS.Orient.C)){     //Center
+                    return intersct_BL;
+                }else if(orient.equals(IS.Orient.T)){ //Top
+                    return intersct_edgT_BL;
+                }else if(orient.equals(IS.Orient.L)){ //Left
+                    return intersct_edgL_BL;
+                }else if(orient.equals(IS.Orient.R)){ //Right
+                    return intersct_edgR_BL;
+                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                    return intersct_edgB_BL;
+                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                    return intersct_crnTL_BL;
+                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                    return intersct_crnTR_BL;
+                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                    return intersct_crnBL_BL;
+                }else{                                 //Bottom right
+                    return intersct_crnBR_BL;
+                }
+            }else{                                   //Stone wasn't put last
+                if (orient.equals(IS.Orient.C)){     //Center
+                    return intersct_B;
+                }else if(orient.equals(IS.Orient.T)){ //Top
+                    return intersct_edgT_B;
+                }else if(orient.equals(IS.Orient.L)){ //Left
+                    return intersct_edgL_B;
+                }else if(orient.equals(IS.Orient.R)){ //Right
+                    return intersct_edgR_B;
+                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                    return intersct_edgB_B;
+                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                    return intersct_crnTL_B;
+                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                    return intersct_crnTR_B;
+                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                    return intersct_crnBL_B;
+                }else{                                 //Bottom right
+                    return intersct_crnBR_B;
+                }
             }
-        }else{                                    //White
-            if (orient.equals(IS.Orient.C)){     //Center
-                return intersct_W;
-            }else if(orient.equals(IS.Orient.T)){ //Top
-                return intersct_edgT_W;
-            }else if(orient.equals(IS.Orient.L)){ //Left
-                return intersct_edgL_W;
-            }else if(orient.equals(IS.Orient.R)){ //Right
-                return intersct_edgR_W;
-            }else if(orient.equals(IS.Orient.B)){ //Bottom
-                return intersct_edgB_W;
-            }else if(orient.equals(IS.Orient.TL)){ //Top left
-                return intersct_crnTL_W;
-            }else if(orient.equals(IS.Orient.TR)){ //Top right
-                return intersct_crnTR_W;
-            }else if(orient.equals(IS.Orient.BL)){ //Bottom left
-                return intersct_crnBL_W;
-            }else{                                //Bottom right
-                return intersct_crnBR_W;
+        }else{                                          //White
+            if (wasPutLast){                            //Stone was put last
+                if (orient.equals(IS.Orient.C)){     //Center
+                    return intersct_WL;
+                }else if(orient.equals(IS.Orient.T)){ //Top
+                    return intersct_edgT_WL;
+                }else if(orient.equals(IS.Orient.L)){ //Left
+                    return intersct_edgL_WL;
+                }else if(orient.equals(IS.Orient.R)){ //Right
+                    return intersct_edgR_WL;
+                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                    return intersct_edgB_WL;
+                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                    return intersct_crnTL_WL;
+                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                    return intersct_crnTR_WL;
+                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                    return intersct_crnBL_WL;
+                }else{                                //Bottom right
+                    return intersct_crnBR_WL;
+                }
+            }else{                                      //Stone wasn't put last
+                if (orient.equals(IS.Orient.C)){     //Center
+                    return intersct_W;
+                }else if(orient.equals(IS.Orient.T)){ //Top
+                    return intersct_edgT_W;
+                }else if(orient.equals(IS.Orient.L)){ //Left
+                    return intersct_edgL_W;
+                }else if(orient.equals(IS.Orient.R)){ //Right
+                    return intersct_edgR_W;
+                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                    return intersct_edgB_W;
+                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                    return intersct_crnTL_W;
+                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                    return intersct_crnTR_W;
+                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                    return intersct_crnBL_W;
+                }else{                                //Bottom right
+                    return intersct_crnBR_W;
+                }
             }
         }
     }//getFieldButtonIcon

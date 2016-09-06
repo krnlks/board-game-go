@@ -21,13 +21,17 @@ public class IS {
      * The intersection's state (empty, black, or white)
      */
     public enum State {E, B, W};
-
+    
     private Orient orient;
     private State state;
+    //TODO Obv this belongs in class Stone
+    //TODO Which is better: attribute if every intersection (like this) or a "global" variable that holds the intersection (better: the stone) that was put last
+    private boolean wasPutLast;
     
     IS(Orient orient){
         this.orient= orient;
         state = State.E;
+        wasPutLast = false;
     }//IS constructor
 
     public Orient getOrient() {
@@ -40,6 +44,16 @@ public class IS {
     
     public void setState(State state) {
         this.state = state;
+        if (state.equals(State.B) || state.equals(State.W))
+            wasPutLast = true;
+    }
+    
+    public boolean wasPutLast(){
+        return wasPutLast;
+    }
+    
+    public void wasNotPutLast(){
+        wasPutLast = false;
     }
 
     @Override

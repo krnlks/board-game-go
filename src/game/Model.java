@@ -52,6 +52,7 @@ public class Model extends Observable{
 	 * (0,0) is the top left corner of the board.
 	 */
 	private IS[][] board;
+	private IS last;                     //Intersection that the last stone was put on
 	private IS[][] board_b4;			 	//Board before, the preceding state of the board
 	private IS[][] board_ko;				//Saves the state of board_b4 while testing on illegal move in "ko"-situation
 	int[][] mark;                            //Used to mark regions of each player
@@ -106,6 +107,8 @@ public class Model extends Observable{
             is = new IS(IS.Orient.B);
             board[dim-1][x] = is;
         }
+        
+        last = board[0][0]; //Used to prevent null pointer exception in processMove
         
         cpyBoard(board, board_b4);
 		
@@ -433,10 +436,20 @@ public class Model extends Observable{
 		}
 		
         cpyBoard(board, board_b4);									//Save the board state so that it can be undone later
+        
+        
         //TODO Bad logic, state <> player
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
+        //TODO lookBoard is not used except in lookAround. Make it local to the latter?
         int [][] lookBoard = new int [dim][dim];
         lookAround(y, x, y, x, getCurrentPlayer(), lookBoard);					//Search for opponent regions to be removed							
+
+        //TODO Alternative: Don't initialize last and perform null check every time. But the null check would be only to prevent a null pointer exception in the initial situation. Which version is better?
+
+        //Update last
+        last.wasNotPutLast();                //Remove indicator
+        last = board[y][x];
+       
         gameCnt++;														//Game counter is set to next player's turn
     }// processMove
     
