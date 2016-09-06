@@ -32,6 +32,7 @@ public class Server extends LAN_Conn{
         try {
             client = socket.accept();
             System.out.println("Server: Client connected!");
+            //TODO Ouch
             model.setChanged1();
             //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
             //makes his draw.

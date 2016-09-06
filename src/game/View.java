@@ -247,8 +247,8 @@ public class View implements Observer{
     JLabel scr_B;  //Score
     JLabel scr_W;
     JLabel phase;   //Displays the information whose turn it is
-    String blackTurn = "Black's turn";
-    String whiteTurn = "White's turn";
+    String blackTurn = "Black begins";
+    String whiteTurn = "";
     JButton pass;
     JButton undo;
     
@@ -378,7 +378,9 @@ public class View implements Observer{
         conn_info_host = new JLabel("");
         host.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-            	gameWindow.setTitle("Go - White");
+            	//TODO Remove dependency between player color (black/white) and LAN role (server/client). First choice: Host or join? Then: color? Also modify Model.setLAN_Role(). 
+                gameWindow.setTitle("Go - White");
+                //TODO Both for choosing host or join and (after that) choosing stone color: Make it possible to change decision
                 conn_info_host.setText("Waiting...");
                 model.setLAN_Role("");
                 if (model.estbl_LanConn() != 0){
@@ -400,6 +402,9 @@ public class View implements Observer{
                 if (model.estbl_LanConn() == 0){
                     System.out.println("View: hostOrJoin: estbl_LanConn() successful");
                     choose.dispose();
+                    blackTurn = "My turn!";
+                    updateScorePanel();
+                    whiteTurn = "White's turn";
                 }else{
                     server_addr.setText("");
                     conn_info_client.setText("Invalid Host");
@@ -575,6 +580,9 @@ public class View implements Observer{
     public void update(Observable arg0, Object arg1) {
         if (arg1.equals(UpdateMessages.CLIENT_CONNECTED)){
             System.out.println("View: update: Going to dispose choose and make waiting visible");
+            whiteTurn = "My turn!"; //I got here because I'm the server. That also means that I'm White.
+            blackTurn = "Black's turn";
+            updateScorePanel(); //Update score panel so that it says this instead of "Black begins"
             choose.dispose();
             System.out.println("View: update: Disposed choose");
             waiting.setVisible(true);

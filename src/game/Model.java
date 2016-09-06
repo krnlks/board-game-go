@@ -24,6 +24,8 @@ import multiplayer.UpdateMessages;
 
 //TODO At the beginning, provide options: local multiplayer or multiplayer (and at some point maybe singleplayer)
 
+//TODO Set player (Black / White) at the beginning because it won't change and it will be used again and again throughout the game. This might also help get rid of getCurrentPlayer() / getOpponent() hassle. Then, only relevant information will be whose turn it is.
+
 /**
  * The data and logic for the game. In Go Black plays against White. 
  * The game is played on a square board that consists of intersections that are either empty
@@ -108,7 +110,7 @@ public class Model extends Observable{
             board[dim-1][x] = is;
         }
         
-        last = board[0][0]; //Used to prevent null pointer exception in processMove
+        last = board[0][0]; //Initialize in order to prevent null pointer exception in processMove
         
         cpyBoard(board, board_b4);
 		
