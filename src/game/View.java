@@ -13,155 +13,14 @@ import multiplayer.UpdateMessages;
  * - Don't call Model methods directly, as in if (model.estbl_LanComm() == 0){ ...
  */
 
+//TODO [med] Adjust size of playing field depending on chosen board dimension (and size of screen, if possible). I.e., if possible, choose a dynamic size instead of static like currently 
+//TODO [low] Add labels with letters and number as coordinates around of the playing field (or only above and left of it)
+//TODO Use a loop and a map for the intersection-ImageIcons
 
 /**
  * @author Lukas Kern
  */
 public class View implements Observer{
-    
-    /**
-     * The Go board consists of {@code dim*dim} {@code IS} intersections of which
-     * each has its own button
-     * 
-     * @see IS
-     */
-    private class BoardButton extends JButton{
-        
-        private static final long serialVersionUID = 1L;
-        
-        int y;     //Position in the boardButtons[][]
-        int x;     //Position in the boardButtons[][]
-        
-        public BoardButton(Icon icon, int y, int x) {
-            super(icon);
-            this.y = y;
-            this.x = x;
-        }//BoardButton constructor
-    }//BoardButton
-
-    private class GameWindowListener implements WindowListener{
-        public void windowClosing(WindowEvent e) {
-            //TODO Send Quit to opponent
-            gameWindow.dispose();
-        }
-        public void windowActivated(WindowEvent e) {
-        }
-        public void windowClosed(WindowEvent e) {
-        }
-        public void windowDeactivated(WindowEvent e) {
-        }
-        public void windowDeiconified(WindowEvent e) {
-        }
-        public void windowIconified(WindowEvent e) {
-        }
-        public void windowOpened(WindowEvent e) {
-        }
-    }//GameWindowListener
-    
-    
-    private void recv_wait(){
-        //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
-        //makes his draw.
-        SwingWorker worker = new SwingWorker(){
-            @Override
-            protected Object doInBackground() throws Exception {
-                model.receive();
-                return null;
-            }
-        };
-        worker.execute();
-        //Meant to hinder player from entering input until it's his turn again
-        //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
-        //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
-        waiting.setVisible(true);
-    }
-    
-    private class BoardButtonActionListener implements ActionListener{
-        public void actionPerformed(ActionEvent e) {
-            BoardButton bb = (BoardButton) e.getSource();
-            if (model.isEmptyIntersection(bb.y, bb.x)){
-                if (model.isNoSuicide(bb.y, bb.x) ){
-                    System.out.println("\nView: BBAL: Draw #" + model.getGamecnt());
-                    model.processMove(bb.y, bb.x);
-                    if ( (model.areBoardsEqual(model.getBoard(), model.getBoard_ko())) && (model.getGamecnt() > 8) ){
-                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
-                        model.undo();
-                    }else{
-                    	updateBoard();
-                    	updateScorePanel();
-                        System.out.println("View: BBAL: Updated score panel.");
-                        //This is the event dispatch thread
-                        System.out.println("View: BBAL: Going to send draw to opponent...");
-                        model.send((bb.y*dim) + bb.x); //something in [0,dim*dim-1]
-                        System.out.println("View: BBAL: Sent draw to opponent.");
-                        System.out.println("View: BBAL: Going to wait for opponent's draw...");
-                        recv_wait();
-                    }
-                }else{
-                    //TODO Make another label / text field for these notifications
-                    phase.setText("That would be suicide!");
-                }
-            }else{
-                phase.setText("Please choose an empty intersection!");
-            }
-        }//actionPerformed
-    }//FieldButtonActionListener
-    
-    private void displayResults(){
-        String result;
-        int scrB = model.getScr_B();    //Black's score
-        int scrW = model.getScr_W();    //White's score
-        
-        if (scrB > scrW){
-            result = String.format("Black wins with %d to %d points!", scrB, scrW);
-        }else if (scrW > scrB){
-            result = String.format("White wins with %d to %d points!", scrW, scrB);
-        }else{
-            result = String.format("Draw!", scrW, scrB);
-        }
-        JOptionPane.showMessageDialog(gameWindow, result);
-    }
-    
-    //TODO Replace these model calls with one call... Gross! 
-    private class PassButtonActionListener implements ActionListener{
-        public void actionPerformed(ActionEvent e) {
-            if ( !model.isDoublePass() ){                       //It's a regular pass (no double pass)
-                model.pass();
-                updateScorePanel(); 
-                model.send(Constants.SEND_PASS);
-                System.out.println("View: PBAL: Sent pass to opponent.");
-                System.out.println("View: PBAL: Going to wait for opponent's draw...");
-                recv_wait();
-            }else{												//Both players passed, game is over
-                model.pass();
-                updateScorePanel();
-                displayResults();
-                model.send(Constants.SEND_DOUBLEPASS);
-                gameWindow.dispose();
-            }
-        }//actionPerformed
-    }//PassButtonActionListener
-    
-    //TODO Implement a phase for deciding on a local draw (including an undo button) and add a 'Send' button
-    //TODO Start implementing MVC cleaner: For now, just call model.undo() (still dirty but hey). Then let the model notify the View, and if, for instance, the move was already undone, display a notification on the board. Do this for pass button and everywhere else, too. 
-    private class UndoButtonActionListener implements ActionListener{
-        public void actionPerformed(ActionEvent e) {
-//            if (model.getGamecnt() > 1){
-//                if (model.areBoardsEqual(model.getBoard(), model.getBoard_b4())){
-//                    phase.setText("You can only undo one move!");
-//                }else{
-//                	model.undo();
-//                	updateBoard();
-//                	updateScorePanel();                                                        
-//                }
-//            }else{
-//                phase.setText("There's no move that can be undone!");
-//            }
-        }//actionPerformed
-    }//UndoButtonActionListener
-    
-    
-
     private static final long serialVersionUID = 1L;
     
     Model model;
@@ -182,56 +41,58 @@ public class View implements Observer{
     BoardButton[][] board; //The UI counterpart of 'board' in Model; has a button for each intersection
 
     //Inner intersections
-    ImageIcon intersct = new ImageIcon("icons/Intersct.jpg");
-    ImageIcon intersct_B = new ImageIcon("icons/Intersct_B.jpg");
-    ImageIcon intersct_BL = new ImageIcon("icons/Intersct_BL.jpg");
-    ImageIcon intersct_W = new ImageIcon("icons/Intersct_W.jpg");
-    ImageIcon intersct_WL = new ImageIcon("icons/Intersct_WL.jpg");
+    ImageIcon intersct = new ImageIcon("icons/Intersct.jpg"); //Intersection without a stone on it
+    ImageIcon intersct_B = new ImageIcon("icons/Intersct_B.jpg"); //with black stone on it
+    ImageIcon intersct_BL = new ImageIcon("icons/Intersct_BL.jpg"); //...that was put last.
+    ImageIcon intersct_W = new ImageIcon("icons/Intersct_W.jpg"); //with white stone on it
+    ImageIcon intersct_WL = new ImageIcon("icons/Intersct_WL.jpg"); //...that was put last.
     
-    //Board corners
+    //BOARD CORNERS
+    //Top left
     ImageIcon intersct_crnTL = new ImageIcon("icons/Intersct_crnTL.jpg");
     ImageIcon intersct_crnTL_B = new ImageIcon("icons/Intersct_crnTL_B.jpg");
     ImageIcon intersct_crnTL_BL = new ImageIcon("icons/Intersct_crnTL_BL.jpg");
     ImageIcon intersct_crnTL_W = new ImageIcon("icons/Intersct_crnTL_W.jpg");
     ImageIcon intersct_crnTL_WL = new ImageIcon("icons/Intersct_crnTL_WL.jpg");
-
+    //Top right
     ImageIcon intersct_crnTR = new ImageIcon("icons/Intersct_crnTR.jpg");
     ImageIcon intersct_crnTR_B = new ImageIcon("icons/Intersct_crnTR_B.jpg");
     ImageIcon intersct_crnTR_BL = new ImageIcon("icons/Intersct_crnTR_BL.jpg");
     ImageIcon intersct_crnTR_W = new ImageIcon("icons/Intersct_crnTR_W.jpg");
     ImageIcon intersct_crnTR_WL = new ImageIcon("icons/Intersct_crnTR_WL.jpg");
-
+    //Bottom left
     ImageIcon intersct_crnBL = new ImageIcon("icons/Intersct_crnBL.jpg");
     ImageIcon intersct_crnBL_B = new ImageIcon("icons/Intersct_crnBL_B.jpg");
     ImageIcon intersct_crnBL_BL = new ImageIcon("icons/Intersct_crnBL_BL.jpg");
     ImageIcon intersct_crnBL_W = new ImageIcon("icons/Intersct_crnBL_W.jpg");
     ImageIcon intersct_crnBL_WL = new ImageIcon("icons/Intersct_crnBL_WL.jpg");
-    
+    //Bottom right
     ImageIcon intersct_crnBR = new ImageIcon("icons/Intersct_crnBR.jpg");
     ImageIcon intersct_crnBR_B = new ImageIcon("icons/Intersct_crnBR_B.jpg");
     ImageIcon intersct_crnBR_BL = new ImageIcon("icons/Intersct_crnBR_BL.jpg");
     ImageIcon intersct_crnBR_W = new ImageIcon("icons/Intersct_crnBR_W.jpg");
     ImageIcon intersct_crnBR_WL = new ImageIcon("icons/Intersct_crnBR_WL.jpg");
     
-    //Board edges
+    //BOARD EDGES
+    //Top
     ImageIcon intersct_edgT = new ImageIcon("icons/Intersct_edgT.jpg");
     ImageIcon intersct_edgT_B = new ImageIcon("icons/Intersct_edgT_B.jpg");
     ImageIcon intersct_edgT_BL = new ImageIcon("icons/Intersct_edgT_BL.jpg");
     ImageIcon intersct_edgT_W = new ImageIcon("icons/Intersct_edgT_W.jpg");
     ImageIcon intersct_edgT_WL = new ImageIcon("icons/Intersct_edgT_WL.jpg");
-
+    //Left
     ImageIcon intersct_edgL = new ImageIcon("icons/Intersct_edgL.jpg");
     ImageIcon intersct_edgL_B = new ImageIcon("icons/Intersct_edgL_B.jpg");
     ImageIcon intersct_edgL_BL = new ImageIcon("icons/Intersct_edgL_BL.jpg");
     ImageIcon intersct_edgL_W = new ImageIcon("icons/Intersct_edgL_W.jpg");
     ImageIcon intersct_edgL_WL = new ImageIcon("icons/Intersct_edgL_WL.jpg");
-    
+    //Right
     ImageIcon intersct_edgR = new ImageIcon("icons/Intersct_edgR.jpg");
     ImageIcon intersct_edgR_B = new ImageIcon("icons/Intersct_edgR_B.jpg");
     ImageIcon intersct_edgR_BL = new ImageIcon("icons/Intersct_edgR_BL.jpg");
     ImageIcon intersct_edgR_W = new ImageIcon("icons/Intersct_edgR_W.jpg");
     ImageIcon intersct_edgR_WL = new ImageIcon("icons/Intersct_edgR_WL.jpg");
-
+    //Bottom
     ImageIcon intersct_edgB = new ImageIcon("icons/Intersct_edgB.jpg");
     ImageIcon intersct_edgB_B = new ImageIcon("icons/Intersct_edgB_B.jpg");
     ImageIcon intersct_edgB_BL = new ImageIcon("icons/Intersct_edgB_BL.jpg");
@@ -393,7 +254,7 @@ public class View implements Observer{
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
         //TODO Outsource this address to development branch and create release with empty text field
-        server_addr.setText("192.168.178.25");  //TODO Remove this line at the end
+        server_addr.setText("127.0.0.1");  //TODO Remove this line at the end
         conn_info_client = new JLabel("");
         ActionListener srvAddrList = new ActionListener() { //Create a listener for the server address
             public void actionPerformed(ActionEvent e) {
@@ -402,7 +263,7 @@ public class View implements Observer{
                 if (model.estbl_LanConn() == 0){
                     System.out.println("View: hostOrJoin: estbl_LanConn() successful");
                     choose.dispose();
-                    blackTurn = "My turn!";
+                    blackTurn = "My turn";
                     updateScorePanel();
                     whiteTurn = "White's turn";
                 }else{
@@ -557,6 +418,38 @@ public class View implements Observer{
         	}
         }
     }//updatePlayingField
+
+    private void displayResults(){
+        String result;
+        int scrB = model.getScr_B();    //Black's score
+        int scrW = model.getScr_W();    //White's score
+        
+        if (scrB > scrW){
+            result = String.format("Black wins with %d to %d points!", scrB, scrW);
+        }else if (scrW > scrB){
+            result = String.format("White wins with %d to %d points!", scrW, scrB);
+        }else{
+            result = String.format("Draw!", scrW, scrB);
+        }
+        JOptionPane.showMessageDialog(gameWindow, result);
+    }//displayResults
+    
+    private void recv_wait(){
+        //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
+        //makes his draw.
+        SwingWorker worker = new SwingWorker(){
+            @Override
+            protected Object doInBackground() throws Exception {
+                model.receive();
+                return null;
+            }
+        };
+        worker.execute();
+        //Meant to hinder player from entering input until it's his turn again
+        //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
+        //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
+        waiting.setVisible(true);
+    }//recv_wait
     
     public void updateScorePanel(){
         model.getTerritory();
@@ -580,7 +473,7 @@ public class View implements Observer{
     public void update(Observable arg0, Object arg1) {
         if (arg1.equals(UpdateMessages.CLIENT_CONNECTED)){
             System.out.println("View: update: Going to dispose choose and make waiting visible");
-            whiteTurn = "My turn!"; //I got here because I'm the server. That also means that I'm White.
+            whiteTurn = "My turn"; //I got here because I'm the server. That also means that I'm White.
             blackTurn = "Black's turn";
             updateScorePanel(); //Update score panel so that it says this instead of "Black begins"
             choose.dispose();
@@ -605,5 +498,113 @@ public class View implements Observer{
         	System.out.println("View: update: What.");
         }
     }//update
+    
+    /**
+     * The Go board consists of {@code dim*dim} {@code IS} intersections of which
+     * each has its own button
+     * 
+     * @see IS
+     */
+    private class BoardButton extends JButton{
+        
+        private static final long serialVersionUID = 1L;
+        
+        int y;     //Position in the boardButtons[][]
+        int x;     //Position in the boardButtons[][]
+        
+        public BoardButton(Icon icon, int y, int x) {
+            super(icon);
+            this.y = y;
+            this.x = x;
+        }//BoardButton constructor
+    }//BoardButton
+
+    private class GameWindowListener implements WindowListener{
+        public void windowClosing(WindowEvent e) {
+            //TODO Send Quit to opponent
+            gameWindow.dispose();
+        }
+        public void windowActivated(WindowEvent e) {
+        }
+        public void windowClosed(WindowEvent e) {
+        }
+        public void windowDeactivated(WindowEvent e) {
+        }
+        public void windowDeiconified(WindowEvent e) {
+        }
+        public void windowIconified(WindowEvent e) {
+        }
+        public void windowOpened(WindowEvent e) {
+        }
+    }//GameWindowListener
+    
+    private class BoardButtonActionListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            BoardButton bb = (BoardButton) e.getSource();
+            if (model.isEmptyIntersection(bb.y, bb.x)){
+                if (model.isNoSuicide(bb.y, bb.x) ){
+                    System.out.println("\nView: BBAL: Draw #" + model.getGamecnt());
+                    model.processMove(bb.y, bb.x);
+                    if ( (model.areBoardsEqual(model.getBoard(), model.getBoard_ko())) && (model.getGamecnt() > 8) ){
+                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
+                        model.undo();
+                    }else{
+                        updateBoard();
+                        updateScorePanel();
+                        System.out.println("View: BBAL: Updated score panel.");
+                        //This is the event dispatch thread
+                        System.out.println("View: BBAL: Going to send draw to opponent...");
+                        model.send((bb.y*dim) + bb.x); //something in [0,dim*dim-1]
+                        System.out.println("View: BBAL: Sent draw to opponent.");
+                        System.out.println("View: BBAL: Going to wait for opponent's draw...");
+                        recv_wait();
+                    }
+                }else{
+                    //TODO Make another label / text field for these notifications
+                    phase.setText("That would be suicide!");
+                }
+            }else{
+                phase.setText("Please choose an empty intersection!");
+            }
+        }//actionPerformed
+    }//FieldButtonActionListener
+    
+    //TODO Replace these model calls with one call... Gross! 
+    private class PassButtonActionListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            if ( !model.isDoublePass() ){                       //It's a regular pass (no double pass)
+                model.pass();
+                updateScorePanel(); 
+                model.send(Constants.SEND_PASS);
+                System.out.println("View: PBAL: Sent pass to opponent.");
+                System.out.println("View: PBAL: Going to wait for opponent's draw...");
+                recv_wait();
+            }else{                                              //Both players passed, game is over
+                model.pass();
+                updateScorePanel();
+                displayResults();
+                model.send(Constants.SEND_DOUBLEPASS);
+                gameWindow.dispose();
+            }
+        }//actionPerformed
+    }//PassButtonActionListener
+    
+    //TODO Implement a phase for deciding on a local draw (including an undo button) and add a 'Send' button
+    //TODO Start implementing MVC cleaner: For now, just call model.undo() (still dirty but hey). Then let the model notify the View, and if, for instance, the move was already undone, display a notification on the board. Do this for pass button and everywhere else, too. 
+    private class UndoButtonActionListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+//            if (model.getGamecnt() > 1){
+//                if (model.areBoardsEqual(model.getBoard(), model.getBoard_b4())){
+//                    phase.setText("You can only undo one move!");
+//                }else{
+//                  model.undo();
+//                  updateBoard();
+//                  updateScorePanel();                                                        
+//                }
+//            }else{
+//                phase.setText("There's no move that can be undone!");
+//            }
+        }//actionPerformed
+    }//UndoButtonActionListener
 
 }//View

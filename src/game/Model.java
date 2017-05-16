@@ -42,6 +42,7 @@ public class Model extends Observable{
     private int pris_W = 0;                    //Conquered opponent stones of White
     private int pris_B_b4 = pris_B;
     private int pris_W_b4 = pris_W;
+    private Player player;
     
     /**
      * The number of the current draw, incremented by each player in each of their turns. Used to determine whose turn it is.
@@ -180,8 +181,10 @@ public class Model extends Observable{
 	public void setLAN_Role(String server_address){
 	    if (server_address.equals("")){
 	        this.lan = new Server(this);
+	        this.player = Player.WHITE;
 	    }else{
 	        this.lan = new Client(this, server_address);
+	        this.player = Player.BLACK;
 	    }
 	}//setLAN_Role
 	
@@ -197,6 +200,15 @@ public class Model extends Observable{
     public IS getIntersectionB4(int y, int x){
         return board_b4[y][x];
     }//getCpyIntersection
+ 
+    public Player getMyPlayer(){
+        return player;
+    }
+    
+    //Can only be set once
+    public void setMyPlayer(Player player){
+        this.player = this.player == null ? player : this.player;
+    }
     
     //TODO This doesn't return the Player but the "color of the stone on an intersection"(?!?!) -> Either change return type to Player or create Enum Stone that doesn't contain E (empty)  
     public IS.State getCurrentPlayer(){       //Getting the color of the player whose turn it is
