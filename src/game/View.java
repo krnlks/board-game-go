@@ -545,7 +545,7 @@ public class View implements Observer{
                 if (model.isNoSuicide(bb.y, bb.x) ){
                     System.out.println("\nView: BBAL: Draw #" + model.getGamecnt());
                     model.processMove(bb.y, bb.x);
-                    if (model.getGamecnt() > 9 && model.areBoardsEqual(model.getBoard(), model.getBoard_ko())){
+                    if (model.getGamecnt() > 9 && model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
                         phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
                         //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
                         model.undo();

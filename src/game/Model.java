@@ -251,11 +251,11 @@ public class Model extends Observable{
         return board;
     }//getFields
 
-    public IS[][] getBoard_b4() {
+    public IS[][] getBoard_m1() {
         return board_m1;
     }//getFields_b4
     
-    public IS[][] getBoard_ko(){
+    public IS[][] getBoard_m2(){
     	return board_m2;
     }//getTmp_4_ko
 
@@ -470,6 +470,7 @@ public class Model extends Observable{
 		System.out.println("board:");
 		System.out.println(boardToString(board, false) + "\n");
 		
+	    //BUG: multiple last stones in view (think it happens during undo())
 		cpyBoard(board_m2, board_m3);
 		cpyBoard(board_m1, board_m2);								//Save a copy of board_m1 for testing on illegal move in "ko"-situation
         cpyBoard(board, board_m1);									//Save the board state so that it can be undone later
