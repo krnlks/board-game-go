@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Observable;
 
+import com.sun.org.apache.xerces.internal.util.SynchronizedSymbolTable;
+
 import multiplayer.Client;
 import multiplayer.LAN_Conn;
 import multiplayer.Server;
@@ -14,7 +16,7 @@ import multiplayer.UpdateMessages;
  * - Global variables
  * - markRegion() returns true/false -> not what you would expect 
  * - Return value of markRegion is never used -> OK to "abuse" it for recursion? 
- * - Rekursionen können bestimmt noch zusammengefasst werden
+ * - Rekursionen kï¿½nnen bestimmt noch zusammengefasst werden
  */
 
 //TODO Change KO back to "ko" - it's not KO but the name of a rule in Go 
@@ -55,32 +57,52 @@ public class Model extends Observable{
 	 * (0,0) is the top left corner of the board.
 	 */
 	private IS[][] board;
+	/**
+	 * The previous ("minus 1") state of the board
+	 */
+	private IS[][] board_m1;
+	/**
+	 * The second last ("minus 2") state of the board.
+	 * Compared to board to detect illegal move in "ko"-situation
+	 */
+	private IS[][] board_m2;
+	/**
+	 * Used when a locally processed move is undone because it's invalid
+	 */
+	private IS[][] board_m3;
 	private IS last;                     //Intersection that the last stone was put on
-	private IS[][] board_b4;			 	//Board before, the preceding state of the board
-	private IS[][] board_ko;				//Saves the state of board_b4 while testing on illegal move in "ko"-situation
 	int[][] mark;                            //Used to mark regions of each player
 	boolean blackRegion;
 	boolean whiteRegion;
 	int currentRegion = 0;							  //How many different regions exist
 	int dim = Constants.BOARD_DIM;           //Board dimension (Beginner = 9, Professional = 19)
 	
-	//TODO Quite some things done in constructor. Outsource creation of the intersections to an init() method?
 	public Model(){
 		gameCnt = 1;                    //The game starts at draw #1
-		board = new IS[dim][dim];		//Create board with empty intersections
-		board_b4 = new IS[dim][dim];	//Copy of the board for undoing moves
-		board_ko = new IS[dim][dim];	//New KO-test board
+		//Create boards with empty intersections
+		board = new IS[dim][dim];
+		board_m1 = new IS[dim][dim];
+		board_m2 = new IS[dim][dim];
+		board_m3 = new IS[dim][dim];
 		
-		IS is;                          //Used for initializing intersections
-		//TODO Redundant vs what is done in View?
-		//Create center intersections
-		for (int y=1; y < dim-1; y++){
-			for (int x=1; x < dim-1; x++){
-			    is = new IS(IS.Orient.C);
-				board[y][x] = is;
-			}
-		}
-		
+		initBoard(board);
+		initBoard(board_m1);
+		initBoard(board_m2);
+		initBoard(board_m3);
+        
+        last = board[0][0]; //Initialize in order to prevent null pointer exception in processMove
+	}//Model constructor
+	
+	private void initBoard(IS[][] board){
+	    IS is;                          //Used for initializing intersections
+        //TODO Redundant vs what is done in View?
+        //Create center intersections
+        for (int y=1; y < dim-1; y++){
+            for (int x=1; x < dim-1; x++){
+                is = new IS(IS.Orient.C);
+                board[y][x] = is;
+            }
+        }
         
         //Create corner intersections
         is = new IS(IS.Orient.TL);
@@ -91,7 +113,6 @@ public class Model extends Observable{
         board[dim-1][0] = is;
         is = new IS(IS.Orient.BR);
         board[dim-1][dim-1] = is;
-        
         
         //Create edge intersections
         for (int x=1; x<dim-1; x++){ //Top
@@ -110,12 +131,7 @@ public class Model extends Observable{
             is = new IS(IS.Orient.B);
             board[dim-1][x] = is;
         }
-        
-        last = board[0][0]; //Initialize in order to prevent null pointer exception in processMove
-        
-        cpyBoard(board, board_b4);
-		
-	}//Model constructor
+	}
 	
 	public void send(int b){
 	    try {
@@ -198,7 +214,7 @@ public class Model extends Observable{
     }// getIntersection
     
     public IS getIntersectionB4(int y, int x){
-        return board_b4[y][x];
+        return board_m1[y][x];
     }//getCpyIntersection
  
     public Player getMyPlayer(){
@@ -236,11 +252,11 @@ public class Model extends Observable{
     }//getFields
 
     public IS[][] getBoard_b4() {
-        return board_b4;
+        return board_m1;
     }//getFields_b4
     
     public IS[][] getBoard_ko(){
-    	return board_ko;
+    	return board_m2;
     }//getTmp_4_ko
 
     public int getTer_B() {
@@ -444,13 +460,19 @@ public class Model extends Observable{
 		//Save state of prisoners in case the draw is undone
 		this.pris_W_b4 = this.pris_W;
 		this.pris_B_b4 = this.pris_B;
-        
-		if (!areBoardsEqual(board_b4, board)){
-			cpyBoard(board_b4, board_ko);								//Save a copy of board_b4 for testing on illegal move in "ko"-situation
-		}
 		
-        cpyBoard(board, board_b4);									//Save the board state so that it can be undone later
-        
+		System.out.println("board_m2:");
+		System.out.println(boardToString(board_m2, false) + "\n");
+
+		System.out.println("board_m1:");
+		System.out.println(boardToString(board_m1, false) + "\n");
+		
+		System.out.println("board:");
+		System.out.println(boardToString(board, false) + "\n");
+		
+		cpyBoard(board_m2, board_m3);
+		cpyBoard(board_m1, board_m2);								//Save a copy of board_m1 for testing on illegal move in "ko"-situation
+        cpyBoard(board, board_m1);									//Save the board state so that it can be undone later
         
         //TODO Bad logic, state <> player
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
@@ -547,7 +569,9 @@ public class Model extends Observable{
     public void undo(){
 		if (gameCnt > 1 ){							//If it's the first move, there's nothing to be undone
 		    
-			cpyBoard(board_b4, board);							
+		    cpyBoard(board_m1, board);							
+		    cpyBoard(board_m2, board_m1);							
+		    cpyBoard(board_m3, board_m2);							
 			
 			if (getCurrentPlayer().equals(IS.State.B)){			//Depending on the player whose turn it was, his latest prisoners are undone
 				this.pris_W = this.pris_W_b4;							
@@ -577,7 +601,8 @@ public class Model extends Observable{
     public boolean areBoardsEqual(IS[][] one, IS[][] other){
         for (int y=0; y < dim; y++){
             for (int x=0; x < dim; x++){
-                if ( !one[y][x].equals(other[y][x]) ){
+                //TODO: implement and use equals instead of comparing states? Also in cpyBoard()
+                if ( one[y][x].getState() != other[y][x].getState() ){
                     return false;
                 }
             }
@@ -590,7 +615,7 @@ public class Model extends Observable{
      * Pass a draw
      */
     public void pass() {
-        cpyBoard(board, board_b4); //TODO Still need this in distributed multiplayer mode??? 
+        cpyBoard(board, board_m1); //TODO Still need this in distributed multiplayer mode??? 
         if (this.gameCnt % 2 == 0) { //White passes
             this.pris_B_b4 = this.pris_B;
             this.pris_B++; //and Black receives a prisoner point
@@ -656,7 +681,8 @@ public class Model extends Observable{
 	public void cpyBoard(IS[][] src, IS[][] dest){
         for (int y=0; y < dim; y++){
             for (int x=0; x < dim; x++){
-                dest[y][x] = src[y][x];
+                if (dest[y][x].getState() != src[y][x].getState())
+                    dest[y][x].setState(src[y][x].getState());
             }            
         }
     }//cpyField
@@ -670,7 +696,13 @@ public class Model extends Observable{
         notifyObservers(updateMessage);
     }//notifyObservers2
     
-    private String boardToString(IS[][]board){
+    /**
+     * 
+     * @param board
+     * @param orientations whether to include the intersections' orientations or not
+     * @return
+     */
+    public String boardToString(IS[][]board, boolean orientations){
         StringBuffer results = new StringBuffer();
         String separator = " ";
 
@@ -678,7 +710,7 @@ public class Model extends Observable{
             if (y > 0)
                 results.append('\n');
             for (int x = 0; x < dim; ++x){
-              results.append(board[y][x]).append(separator);
+              results.append(board[y][x].toString(orientations)).append(separator);
           }
         }
         return results.toString();
@@ -688,8 +720,8 @@ public class Model extends Observable{
     public String toString() {
         return "\nModel [lan=" + lan + ", ter_B=" + ter_B + ", ter_W=" + ter_W + ", pris_B="
                 + pris_B + ", pris_W=" + pris_W + ", pris_B_b4=" + pris_B_b4 + ", pris_W_b4=" + pris_W_b4 + ", gamecnt="
-                + gameCnt + ",\nboard=\n" + boardToString(board) + ",\nboard_b4=\n" + boardToString(board_b4)
-                + ",\ntmp_4_ko=\n" + boardToString(board_ko) + ",\nboardCpy=\n" + Arrays.toString(mark)
+                + gameCnt + ",\nboard=\n" + boardToString(board, false) + ",\nboard_b4=\n" + boardToString(board_m1, false)
+                + ",\ntmp_4_ko=\n" + boardToString(board_m2, false) + ",\nboardCpy=\n" + Arrays.toString(mark)
                 + ",\nblackRegion=" + blackRegion + ", whiteRegion=" + whiteRegion + ", currentRegion=" + currentRegion
                 + ", dim=" + dim + "]\n";
     }

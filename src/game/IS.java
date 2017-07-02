@@ -56,10 +56,12 @@ public class IS {
         wasPutLast = false;
     }
 
-    @Override
-    public String toString() {
-        return "[" + orient + ", " + state + "]";
+    public String toString(boolean orientation) {
+        String stateString = (this.state == State.E) ? " " : this.state.toString(); 
+        return orientation ? "[" + orient + ", " + stateString + "]" : "[" + stateString + "]";
     }
+    
+    
     
     
 }//enum IS
