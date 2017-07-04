@@ -57,11 +57,20 @@ public class IS {
     }
 
     public String toString(boolean orientation) {
-        String stateString = (this.state == State.E) ? " " : this.state.toString(); 
-        return orientation ? "[" + orient + ", " + stateString + "]" : "[" + stateString + "]";
+        String result = (state == State.E) ? " " : state.toString();
+        if (orientation){
+            result = orient + ", " + result; 
+        }
+        char bracketOpen;
+        char bracketClose;
+        if (wasPutLast){
+            bracketOpen = '(';
+            bracketClose = ')';
+        }else {
+            bracketOpen = '[';
+            bracketClose = ']';
+        }
+        result = bracketOpen + result + bracketClose; 
+        return result; 
     }
-    
-    
-    
-    
-}//enum IS
+}

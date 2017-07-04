@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Observable;
 
-import com.sun.org.apache.xerces.internal.util.SynchronizedSymbolTable;
-
 import multiplayer.Client;
 import multiplayer.LAN_Conn;
 import multiplayer.Server;
@@ -19,7 +17,6 @@ import multiplayer.UpdateMessages;
  * - Rekursionen k�nnen bestimmt noch zusammengefasst werden
  */
 
-//TODO Change KO back to "ko" - it's not KO but the name of a rule in Go 
 //TODO Look at more complex methods in Model and write good and clear description
 
 //TODO Sometimes I'm using ==, sometimes .equals. Fix that!
@@ -52,6 +49,7 @@ public class Model extends Observable{
      * <p>TODO Also used for something else (like comparing board states)? Maybe there's a better solution. 
      */
 	private int gameCnt;
+	//TODO: Maybe move the 4 board states to one IS[][][]
 	/**
 	 * The state of the board represented by the state of its intersections.
 	 * (0,0) is the top left corner of the board.
@@ -67,10 +65,13 @@ public class Model extends Observable{
 	 */
 	private IS[][] board_m2;
 	/**
+	 * The third last ("minus 3") state of the board.
 	 * Used when a locally processed move is undone because it's invalid
 	 */
 	private IS[][] board_m3;
-	private IS last;                     //Intersection that the last stone was put on
+	//TODO: Convert to IS[] lastStones so that boardToString() can mark previous last stones correctly
+	private IS lastStone;                     //Intersection that the last stone was put on
+	private IS lastStone_backup;                     //back up of last in for when a locally processed move must be undone
 	int[][] mark;                            //Used to mark regions of each player
 	boolean blackRegion;
 	boolean whiteRegion;
@@ -90,7 +91,7 @@ public class Model extends Observable{
 		initBoard(board_m2);
 		initBoard(board_m3);
         
-        last = board[0][0]; //Initialize in order to prevent null pointer exception in processMove
+        lastStone = board[0][0]; //Initialize in order to prevent null pointer exception in processMove
 	}//Model constructor
 	
 	private void initBoard(IS[][] board){
@@ -470,12 +471,11 @@ public class Model extends Observable{
 		System.out.println("board:");
 		System.out.println(boardToString(board, false) + "\n");
 		
-	    //BUG: multiple last stones in view (think it happens during undo())
 		cpyBoard(board_m2, board_m3);
 		cpyBoard(board_m1, board_m2);								//Save a copy of board_m1 for testing on illegal move in "ko"-situation
         cpyBoard(board, board_m1);									//Save the board state so that it can be undone later
         
-        //TODO Bad logic, state <> player
+        //TODO Bad semantics, state <> player
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
         //TODO lookBoard is not used except in lookAround. Make it local to the latter?
         int [][] lookBoard = new int [dim][dim];
@@ -484,8 +484,9 @@ public class Model extends Observable{
         //TODO Alternative: Don't initialize last and perform null check every time. But the null check would be only to prevent a null pointer exception in the initial situation. Which version is better?
 
         //Update last
-        last.wasNotPutLast();                //Remove indicator
-        last = board[y][x];
+        lastStone.wasNotPutLast();                //Remove indicator
+        lastStone_backup = lastStone;
+        lastStone = board[y][x];
        
         gameCnt++;														//Game counter is set to next player's turn
     }// processMove
@@ -580,6 +581,10 @@ public class Model extends Observable{
 				this.pris_B = this.pris_B_b4;				
 			}
 			gameCnt--;								//Set game count to last turn
+			
+			lastStone.wasNotPutLast();
+			lastStone = lastStone_backup;
+			lastStone.wasPutLast();
 		}
 	}//undo
 	
@@ -590,12 +595,12 @@ public class Model extends Observable{
      * Returns true if two {@code IS[][]} board states are equal with respect to the values of the boards' {@code IS} intersections.
 	 * 
 	 * <p> Used to assure that the undo button is hit only once in a row.
-	 * If {@code board} and {@code board_b4} are already equal, it's not allowed to undo your move.
-	 * Used to find out whether it is a KO-situation.
-	 * If {@code board} and {@code tmp_4_ko} are equal, the move reproduces the preceding state of the board and therefore isn't allowed.
+	 * If {@code board} and {@code board_m1} are already equal, it's not allowed to undo your move.
+	 * Used to find out whether it is a ko-situation.
+	 * If {@code board} and {@code board_m2} are equal, the move reproduces the preceding state of the board and therefore isn't allowed.
      * 
      * @param one one {@code IS[][]} board state
-     * @param other the other
+     * @param other the other {@code IS[][]} board state
      * @return true if two {@code IS[][]} board states are equal with respect to the values of the boards' {@code IS} intersections. 
      * @see IS
      */
@@ -711,8 +716,8 @@ public class Model extends Observable{
             if (y > 0)
                 results.append('\n');
             for (int x = 0; x < dim; ++x){
-              results.append(board[y][x].toString(orientations)).append(separator);
-          }
+                results.append(board[y][x].toString(orientations)).append(separator);
+            }
         }
         return results.toString();
     }

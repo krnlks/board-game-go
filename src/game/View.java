@@ -297,7 +297,6 @@ public class View implements Observer{
     
     private ImageIcon getBoardButtonIcon(int y, int x){
         //TODO Not very urgent: I should not access the Model directly as I do here
-        //TODO include "last" into differentiation
         IS is = model.getIntersection(y, x);
         IS.Orient orient= is.getOrient();
         IS.State state = is.getState();

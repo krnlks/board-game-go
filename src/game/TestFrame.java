@@ -8,7 +8,6 @@ public class TestFrame {
 		SwingUtilities.invokeLater(new Runnable(){
 			@Override
 			public void run() {
-				// TODO Auto-generated method stub
 				CUT cut = new CUT(Player.WHITE);
 			}
 		});
