@@ -183,12 +183,19 @@ public class View implements Observer{
                 phase = new JLabel(blackTurn);
                 pass = new JButton("Pass");
                 pass.addActionListener( new PassButtonActionListener() );
-                undo = new JButton("Undo");
-                undo.addActionListener( new UndoButtonActionListener() );
+//                undo = new JButton("Undo");
+//                undo.addActionListener( new UndoButtonActionListener() );
             
             scorePanel.add(new JLabel());           //Upper left corner of the scorePanel is empty
-            scorePanel.add(new JLabel("Black"));
-            scorePanel.add(new JLabel("White"));
+            Font font = new Font(new JLabel().getFont().getFontName(), Font.BOLD, 16);
+            JLabel black = new JLabel("Black"); 
+            black.setFont(font);
+            scorePanel.add(black);
+            
+            JLabel white = new JLabel("White"); 
+            white.setForeground(Color.WHITE);
+            white.setFont(font);
+            scorePanel.add(white);
             
             scorePanel.add(new JLabel("Territory"));
             scorePanel.add(ter_B);
@@ -204,7 +211,7 @@ public class View implements Observer{
             
             scorePanel.add(phase);           //lower left corner of the scorePanel is empty
             scorePanel.add(pass);
-            scorePanel.add(undo);
+//            scorePanel.add(undo);
             
         splitPane.add(scorePanel);
         
@@ -593,17 +600,17 @@ public class View implements Observer{
     //TODO Start implementing MVC cleaner: For now, just call model.undo() (still dirty but hey). Then let the model notify the View, and if, for instance, the move was already undone, display a notification on the board. Do this for pass button and everywhere else, too. 
     private class UndoButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-//            if (model.getGamecnt() > 1){
-//                if (model.areBoardsEqual(model.getBoard(), model.getBoard_b4())){
-//                    phase.setText("You can only undo one move!");
-//                }else{
-//                  model.undo();
-//                  updateBoard();
-//                  updateScorePanel();                                                        
-//                }
-//            }else{
-//                phase.setText("There's no move that can be undone!");
-//            }
+            if (model.getGamecnt() > 1){
+                if (model.areBoardsEqual(model.getBoard(), model.getBoard_m1())){
+                    phase.setText("You can only undo one move!");
+                }else{
+                  model.undo();
+                  updateBoard();
+                  updateScorePanel();                                                        
+                }
+            }else{
+                phase.setText("There's no move that can be undone!");
+            }
         }//actionPerformed
     }//UndoButtonActionListener
 
