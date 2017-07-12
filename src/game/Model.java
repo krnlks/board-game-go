@@ -515,7 +515,7 @@ public class Model extends Observable{
      * @return true if ???
      * @see #processMove
      */
-    public boolean lookAround(int sy, int sx, int yNow, int xNow, IS.State playerColor, int[][] lookBoard){ //Looking for what??
+    public boolean lookAround(int sy, int sx, int yNow, int xNow, IS.State playerColor, int[][] lookBoard){ //TODO: Looking for what??
 	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim){
 	        return false;
 	    }else if (lookBoard[yNow][xNow] == 1 || lookBoard[yNow][xNow] == 2) {
