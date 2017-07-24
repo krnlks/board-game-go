@@ -435,11 +435,13 @@ public class View implements Observer{
         }else if (scrW > scrB){
             result = String.format("White wins with %d to %d points!", scrW, scrB);
         }else{
-            result = String.format("Draw!", scrW, scrB);
+            result = String.format("Draw! Both players scored %d points.", scrW);
         }
         JOptionPane.showMessageDialog(gameWindow, result);
     }//displayResults
     
+    //TODO: This should better be in Model. But then I should improve my observer pattern, too.
+    //Is there something like C#'s event Action in java?
     private void recv_wait(){
         //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
         //makes his draw.
@@ -451,7 +453,7 @@ public class View implements Observer{
             }
         };
         worker.execute();
-        //Meant to hinder player from entering input until it's his turn again
+        //Hinder the player from performing an action until it's their turn again
         //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
         //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
         waiting.setVisible(true);
@@ -543,6 +545,7 @@ public class View implements Observer{
         }
     }//GameWindowListener
     
+    /** Listens to the {@link ISButton}s on the board */
     private class ISButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
             ISButton isB = (ISButton) e.getSource();
@@ -588,8 +591,8 @@ public class View implements Observer{
             }else{                                              //Both players passed, game is over
                 model.pass();
                 updateScorePanel();
-                displayResults();
                 model.send(Constants.SEND_DOUBLEPASS);
+                displayResults();
                 gameWindow.dispose();
             }
         }//actionPerformed
