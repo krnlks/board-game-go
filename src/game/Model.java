@@ -19,9 +19,7 @@ import multiplayer.UpdateMessages;
 
 //TODO Look at more complex methods in Model and write good and clear description
 
-//TODO Sometimes I'm using ==, sometimes .equals. Fix that!
-
-//TODO At the beginning, provide options: local multiplayer or multiplayer (and at some point maybe singleplayer)
+//TODO At the beginning, provide options: local or distributed multiplayer (and at some point maybe singleplayer)
 
 //TODO Set player (Black / White) at the beginning because it won't change and it will be used again and again throughout the game. This might also help get rid of getCurrentPlayer() / getOpponent() hassle. Then, only relevant information will be whose turn it is.
 
@@ -100,36 +98,36 @@ public class Model extends Observable{
         //Create center intersections
         for (int y=1; y < dim-1; y++){
             for (int x=1; x < dim-1; x++){
-                is = new IS(IS.Orient.C);
+                is = new IS(IS.Type.C);
                 board[y][x] = is;
             }
         }
         
         //Create corner intersections
-        is = new IS(IS.Orient.TL);
+        is = new IS(IS.Type.CRN_TL);
         board[0][0] = is;
-        is = new IS(IS.Orient.TR);
+        is = new IS(IS.Type.CRN_TR);
         board[0][dim-1] = is;
-        is = new IS(IS.Orient.BL);
+        is = new IS(IS.Type.СRN_BL);
         board[dim-1][0] = is;
-        is = new IS(IS.Orient.BR);
+        is = new IS(IS.Type.CRN_BR);
         board[dim-1][dim-1] = is;
         
         //Create edge intersections
         for (int x=1; x<dim-1; x++){ //Top
-            is = new IS(IS.Orient.T);
+            is = new IS(IS.Type.E_T);
             board[0][x] = is;
         }
         for (int y=1; y<dim-1; y++){ //Left
-            is = new IS(IS.Orient.L);
+            is = new IS(IS.Type.E_L);
             board[y][0] = is;
         }
         for (int y=1; y<dim-1; y++){ //Right
-            is = new IS(IS.Orient.R);
+            is = new IS(IS.Type.E_R);
             board[y][dim-1] = is;
         }
         for (int x=1; x<dim-1; x++){ //Bottom
-            is = new IS(IS.Orient.B);
+            is = new IS(IS.Type.E_B);
             board[dim-1][x] = is;
         }
 	}

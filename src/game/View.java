@@ -38,7 +38,7 @@ public class View implements Observer{
     JSplitPane splitPane;
     
     JPanel boardPanel;     //Holds all the UI components
-    BoardButton[][] board; //The UI counterpart of 'board' in Model; has a button for each intersection
+    ISButton[][] board; //The UI counterpart of 'board' in Model; has a button for each intersection
 
     //Inner intersections
     ImageIcon intersct = new ImageIcon("icons/Intersct.jpg"); //Intersection without a stone on it
@@ -133,7 +133,7 @@ public class View implements Observer{
             boardPanel.setLayout( new GridLayout (dim,dim) );
             boardPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
             
-                board = new BoardButton[dim][dim];
+                board = new ISButton[dim][dim];
                 
                 //TODO Remove redundancy or incorporate setting corner and edge icons here
                 //TODO Also, redundant vs what is done in Model
@@ -141,8 +141,8 @@ public class View implements Observer{
                 //Also set center icons
                 for (int y=0; y<dim; y++){
                     for (int x=0; x<dim; x++){
-                        board[y][x] = new BoardButton(intersct, y, x);
-                        board[y][x].addActionListener( new BoardButtonActionListener() );
+                        board[y][x] = new ISButton(intersct, y, x);
+                        board[y][x].addActionListener( new ISButtonActionListener() );
                         board[y][x].setBorder(BorderFactory.createEmptyBorder());
                         boardPanel.add(board[y][x]);      
                     }//for
@@ -261,7 +261,7 @@ public class View implements Observer{
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
         //TODO Outsource this address to development branch and create release with empty text field
-        server_addr.setText("127.0.0.1");  //TODO Remove this line at the end
+        server_addr.setText("localhost");
         conn_info_client = new JLabel("");
         ActionListener srvAddrList = new ActionListener() { //Create a listener for the server address
             public void actionPerformed(ActionEvent e) {
@@ -302,114 +302,114 @@ public class View implements Observer{
     }//hostOrJoin
     
     
-    private ImageIcon getBoardButtonIcon(int y, int x){
+    private ImageIcon getISButtonIcon(int y, int x){
         //TODO Not very urgent: I should not access the Model directly as I do here
         IS is = model.getIntersection(y, x);
-        IS.Orient orient= is.getOrient();
+        IS.Type type= is.getType();
         IS.State state = is.getState();
         boolean wasPutLast = is.wasPutLast();
         
-        if (state.equals(IS.State.E)){            //Empty
-            if (orient.equals(IS.Orient.C)){     //Center
+        if (state.equals(IS.State.E)){
+            if (type.equals(IS.Type.C)){
                 return intersct;
-            }else if(orient.equals(IS.Orient.T)){ //Top
+            }else if(type.equals(IS.Type.E_T)){
                 return intersct_edgT;
-            }else if(orient.equals(IS.Orient.L)){ //Left
+            }else if(type.equals(IS.Type.E_L)){
                 return intersct_edgL;
-            }else if(orient.equals(IS.Orient.R)){ //Right
+            }else if(type.equals(IS.Type.E_R)){
                 return intersct_edgR;
-            }else if(orient.equals(IS.Orient.B)){ //Bottom
+            }else if(type.equals(IS.Type.E_B)){
                 return intersct_edgB;
-            }else if(orient.equals(IS.Orient.TL)){ //Top left
+            }else if(type.equals(IS.Type.CRN_TL)){
                 return intersct_crnTL;
-            }else if(orient.equals(IS.Orient.TR)){ //Top right
+            }else if(type.equals(IS.Type.CRN_TR)){
                 return intersct_crnTR;
-            }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+            }else if(type.equals(IS.Type.СRN_BL)){
                 return intersct_crnBL;
-            }else{                                 //Bottom right
+            }else{                                 //Bottom right corner
                 return intersct_crnBR;
             }
-        }else if (state.equals(IS.State.B)){      //Black
-            if (wasPutLast){                        //Stone was put last                        
-                if (orient.equals(IS.Orient.C)){     //Center
+        }else if (state.equals(IS.State.B)){
+            if (wasPutLast){                        
+                if (type.equals(IS.Type.C)){
                     return intersct_BL;
-                }else if(orient.equals(IS.Orient.T)){ //Top
+                }else if(type.equals(IS.Type.E_T)){
                     return intersct_edgT_BL;
-                }else if(orient.equals(IS.Orient.L)){ //Left
+                }else if(type.equals(IS.Type.E_L)){
                     return intersct_edgL_BL;
-                }else if(orient.equals(IS.Orient.R)){ //Right
+                }else if(type.equals(IS.Type.E_R)){
                     return intersct_edgR_BL;
-                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                }else if(type.equals(IS.Type.E_B)){
                     return intersct_edgB_BL;
-                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                }else if(type.equals(IS.Type.CRN_TL)){
                     return intersct_crnTL_BL;
-                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_BL;
-                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                }else if(type.equals(IS.Type.СRN_BL)){
                     return intersct_crnBL_BL;
-                }else{                                 //Bottom right
+                }else{                                 //Bottom right corner
                     return intersct_crnBR_BL;
                 }
             }else{                                   //Stone wasn't put last
-                if (orient.equals(IS.Orient.C)){     //Center
+                if (type.equals(IS.Type.C)){
                     return intersct_B;
-                }else if(orient.equals(IS.Orient.T)){ //Top
+                }else if(type.equals(IS.Type.E_T)){
                     return intersct_edgT_B;
-                }else if(orient.equals(IS.Orient.L)){ //Left
+                }else if(type.equals(IS.Type.E_L)){
                     return intersct_edgL_B;
-                }else if(orient.equals(IS.Orient.R)){ //Right
+                }else if(type.equals(IS.Type.E_R)){
                     return intersct_edgR_B;
-                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                }else if(type.equals(IS.Type.E_B)){
                     return intersct_edgB_B;
-                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                }else if(type.equals(IS.Type.CRN_TL)){
                     return intersct_crnTL_B;
-                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_B;
-                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                }else if(type.equals(IS.Type.СRN_BL)){
                     return intersct_crnBL_B;
-                }else{                                 //Bottom right
+                }else{                                 //Bottom right corner
                     return intersct_crnBR_B;
                 }
             }
         }else{                                          //White
-            if (wasPutLast){                            //Stone was put last
-                if (orient.equals(IS.Orient.C)){     //Center
+            if (wasPutLast){
+                if (type.equals(IS.Type.C)){
                     return intersct_WL;
-                }else if(orient.equals(IS.Orient.T)){ //Top
+                }else if(type.equals(IS.Type.E_T)){
                     return intersct_edgT_WL;
-                }else if(orient.equals(IS.Orient.L)){ //Left
+                }else if(type.equals(IS.Type.E_L)){
                     return intersct_edgL_WL;
-                }else if(orient.equals(IS.Orient.R)){ //Right
+                }else if(type.equals(IS.Type.E_R)){
                     return intersct_edgR_WL;
-                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                }else if(type.equals(IS.Type.E_B)){
                     return intersct_edgB_WL;
-                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                }else if(type.equals(IS.Type.CRN_TL)){
                     return intersct_crnTL_WL;
-                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_WL;
-                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                }else if(type.equals(IS.Type.СRN_BL)){
                     return intersct_crnBL_WL;
-                }else{                                //Bottom right
+                }else{                                //Bottom right corner
                     return intersct_crnBR_WL;
                 }
             }else{                                      //Stone wasn't put last
-                if (orient.equals(IS.Orient.C)){     //Center
+                if (type.equals(IS.Type.C)){
                     return intersct_W;
-                }else if(orient.equals(IS.Orient.T)){ //Top
+                }else if(type.equals(IS.Type.E_T)){
                     return intersct_edgT_W;
-                }else if(orient.equals(IS.Orient.L)){ //Left
+                }else if(type.equals(IS.Type.E_L)){
                     return intersct_edgL_W;
-                }else if(orient.equals(IS.Orient.R)){ //Right
+                }else if(type.equals(IS.Type.E_R)){
                     return intersct_edgR_W;
-                }else if(orient.equals(IS.Orient.B)){ //Bottom
+                }else if(type.equals(IS.Type.E_B)){
                     return intersct_edgB_W;
-                }else if(orient.equals(IS.Orient.TL)){ //Top left
+                }else if(type.equals(IS.Type.CRN_TL)){
                     return intersct_crnTL_W;
-                }else if(orient.equals(IS.Orient.TR)){ //Top right
+                }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_W;
-                }else if(orient.equals(IS.Orient.BL)){ //Bottom left
+                }else if(type.equals(IS.Type.СRN_BL)){
                     return intersct_crnBL_W;
-                }else{                                //Bottom right
+                }else{                                //Bottom right corner
                     return intersct_crnBR_W;
                 }
             }
@@ -420,7 +420,7 @@ public class View implements Observer{
     private void updateBoard(){
         for (int y=0; y<dim; y++) {
         	for (int x=0; x<dim; x++) {
-        	    board[y][x].setIcon(getBoardButtonIcon(y, x));
+        	    board[y][x].setIcon(getISButtonIcon(y, x));
         	}
         }
     }//updatePlayingField
@@ -506,24 +506,23 @@ public class View implements Observer{
     }//update
     
     /**
-     * The Go board consists of {@code dim*dim} {@code IS} intersections of which
-     * each has its own button
-     * 
+     * "Intersection button". The board's intersections are buttons that can be clicked to place a stone.  
      * @see IS
      */
-    private class BoardButton extends JButton{
+    private class ISButton extends JButton{
         
         private static final long serialVersionUID = 1L;
         
-        int y;     //Position in the boardButtons[][]
-        int x;     //Position in the boardButtons[][]
+        //Position on the board
+        int y;
+        int x;
         
-        public BoardButton(Icon icon, int y, int x) {
+        public ISButton(Icon icon, int y, int x) {
             super(icon);
             this.y = y;
             this.x = x;
-        }//BoardButton constructor
-    }//BoardButton
+        }
+    }
 
     private class GameWindowListener implements WindowListener{
         public void windowClosing(WindowEvent e) {
@@ -544,13 +543,13 @@ public class View implements Observer{
         }
     }//GameWindowListener
     
-    private class BoardButtonActionListener implements ActionListener{
+    private class ISButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            BoardButton bb = (BoardButton) e.getSource();
-            if (model.isEmptyIntersection(bb.y, bb.x)){
-                if (model.isNoSuicide(bb.y, bb.x) ){
-                    System.out.println("\nView: BBAL: Draw #" + model.getGamecnt());
-                    model.processMove(bb.y, bb.x);
+            ISButton isB = (ISButton) e.getSource();
+            if (model.isEmptyIntersection(isB.y, isB.x)){
+                if (model.isNoSuicide(isB.y, isB.x) ){
+                    System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
+                    model.processMove(isB.y, isB.x);
                     if (model.getGamecnt() > 9 && model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
                         phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
                         //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
@@ -558,12 +557,12 @@ public class View implements Observer{
                     }else{
                         updateBoard();
                         updateScorePanel();
-                        System.out.println("View: BBAL: Updated score panel.");
+                        System.out.println("View: ISBAL: Updated score panel.");
                         //This is the event dispatch thread
-                        System.out.println("View: BBAL: Going to send draw to opponent...");
-                        model.send((bb.y*dim) + bb.x); //something in [0,dim*dim-1]
-                        System.out.println("View: BBAL: Sent draw to opponent.");
-                        System.out.println("View: BBAL: Going to wait for opponent's draw...");
+                        System.out.println("View: ISBAL: Going to send draw to opponent...");
+                        model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
+                        System.out.println("View: ISBAL: Sent draw to opponent.");
+                        System.out.println("View: ISBAL: Going to wait for opponent's draw...");
                         recv_wait();
                     }
                 }else{

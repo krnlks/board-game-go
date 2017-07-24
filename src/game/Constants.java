@@ -5,7 +5,7 @@ package game;
  */
 public class Constants {
     /**
-     * A constant holding the dimension of the board. Beginner = 9, Professional = 19 
+     * The dimension of the board. Standard: 19x19, beginner: 9x9 or 13x13. 
      */
     public static final int BOARD_DIM = 9;
     public static final int SEND_PASS = 85;
