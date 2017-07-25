@@ -550,7 +550,7 @@ public class View implements Observer{
         public void actionPerformed(ActionEvent e) {
             ISButton isB = (ISButton) e.getSource();
             if (model.isEmptyIntersection(isB.y, isB.x)){
-                if (model.isNoSuicide(isB.y, isB.x) ){
+                if (!model.isSuicide(isB.y, isB.x) ){
                     System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
                     model.processMove(isB.y, isB.x);
                     if (model.getGamecnt() > 9 && model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
