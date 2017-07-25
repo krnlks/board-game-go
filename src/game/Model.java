@@ -345,10 +345,10 @@ public class Model extends Observable{
         				}
         				//If the intersection has already been marked,
         				//clear it for hasGroupLiberty
-        				for (int k=0; k < dim; k++){
-        				    for (int l=0; l < dim; l++){
-        				        if (tmp[k][l] == 1){	
-        				            tmp[k][l] = 0;		
+        				for (int l=0; l < dim; l++){
+        				    for (int k=0; k < dim; k++){
+        				        if (tmp[l][k] == 1){	
+        				            tmp[l][k] = 0;		
         				        }
         				    }
         				}
@@ -421,13 +421,8 @@ public class Model extends Observable{
 		
         //TODO Bad semantics, state <> player
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
-        //TODO lookBoard is not used except in lookAround. Make it local to the latter?
-        int [][] adjacentGroups = new int [dim][dim];
-        updateBoard(y, x, y, x, getCurrentPlayer(), adjacentGroups);					//Search for opponent regions to be removed							
+        updateBoard(y, x, getCurrentPlayer());                    //Search for opponent regions to be removed
 
-        //TODO Alternative: Don't initialize last and perform null check every time. But the null check would be only to prevent a null pointer exception in the initial situation. Which version is better?
-
-        //Update last
         lastStone.wasNotPutLast();                //Remove indicator
         lastStone_backup = lastStone;
         lastStone = board[y][x];
@@ -445,49 +440,51 @@ public class Model extends Observable{
      * In more detail: If an opponent stone is found, the latter searches its group and finds out whether it has a liberty.
      * If the group does not have a liberty it is removed.
      * 
-     * <p> {@code lookBoard} and {@code mark}:
-     * <br> contain zeros by default ("empty intersection"). If an adjacent stone of {@code playerColor} is found, its respective value is set to 1.
-     * If an adjacent opponent stone is found, its value is set to 2.
+     * <p> {@code mark}:
+     * <br> contains zeros by default ("empty intersections"). hasGroupLiberty marks groups that are the opponent from the
+     * perspective of this player with 1. If the marked group doesn't have a liberty, its stones are removed.
      * 
-     * @param yStart y-coordinate of the intersection on which a stone was placed
-     * @param xStart x-coordinate of the intersection on which a stone was placed
-     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
-     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
+     * @param y y-coordinate of the intersection on which a stone was placed
+     * @param x x-coordinate of the intersection on which a stone was placed
      * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
-     * @param adjacentGroups stores adjacent {@code playerColor} groups that we find 
      * @see #processMove
      * @see #hasGroupLiberty
      */
-    public void updateBoard(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] adjacentGroups){
-        if (       yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim                     //Out of bounds
-                || adjacentGroups[yNow][xNow] == 1                                            //Already been here
-                || board[yNow][xNow].getState().equals(IS.State.E)){                     //Found an empty intersection
-            return;
-        }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){       //Found adjacent stone of opponent color
-            int [][] mark = new int[dim][dim];                                          //Mark what we find
-            mark[yStart][xStart] = 2; //mark our stone as an opponent's stone for hasGroupLiberty
-            if (!hasGroupLiberty(yNow, xNow, yNow, xNow, getOpponent(playerColor), mark)){  //If the opponent group doesn't have a liberty,
-                for (int y = 0; y < dim; y++) {                                             //remove it.
-                    for (int x = 0; x < dim; x++) {
-                        if (mark[y][x] == 1) {
-                            board[y][x].setState(IS.State.E);
-                            if (gameCnt % 2 == 0) {                             //White's move
-                                pris_W++;                                       //White captures the removed black stone
-                            } else {                                            //Black's move
-                                pris_B++;                                       //Black captures the removed white stone
-                            }// if                               
-                        }//if
+    public void updateBoard(int y, int x, IS.State playerColor){
+        int []yAdj = new int[4];
+        yAdj[0] = y;
+        yAdj[1] = y-1;
+        yAdj[2] = y;
+        yAdj[3] = y+1;
+        int []xAdj = new int[4];
+        xAdj[0] = x-1;
+        xAdj[1] = x;
+        xAdj[2] = x+1;
+        xAdj[3] = x;
+        for (int i = 0; i < 4; i++){
+            if (yAdj[i] < 0 || yAdj[i] >= dim || xAdj[i] < 0 || xAdj[i] >= dim
+                    || !board[yAdj[i]][xAdj[i]].getState().equals(getOpponent(playerColor))){
+                continue;
+            }else{
+                int [][] mark = new int[dim][dim];                                          //Mark what we find
+                mark[y][x] = 2; //mark our stone as an opponent's stone for hasGroupLiberty
+                if (!hasGroupLiberty(yAdj[i], xAdj[i], yAdj[i], xAdj[i], getOpponent(playerColor), mark)){  //If the opponent group doesn't have a liberty,
+                    for (int l = 0; l < dim; l++) {                                             //remove it.
+                        for (int k = 0; k < dim; k++) {
+                            if (mark[l][k] == 1) {
+                                board[l][k].setState(IS.State.E);
+                                if (gameCnt % 2 == 0) {                             //White's move
+                                    pris_W++;                                       //White captures the removed black stone
+                                } else {                                            //Black's move
+                                    pris_B++;                                       //Black captures the removed white stone
+                                }// if                               
+                            }//if
+                        }//for
                     }//for
-                }//for
+                }
             }
-        }else if (board[yNow][xNow].getState().equals(playerColor)) {             //Found adjacent stone of playerColor
-            adjacentGroups[yNow][xNow] = 1;                                          
-            updateBoard(yStart, xStart, yNow, xNow-1, playerColor, adjacentGroups);                           //Look west, north, east, south
-            updateBoard(yStart, xStart, yNow-1, xNow, playerColor, adjacentGroups);
-            updateBoard(yStart, xStart, yNow, xNow+1, playerColor, adjacentGroups);
-            updateBoard(yStart, xStart, yNow+1, xNow, playerColor, adjacentGroups);
         }
-    }//lookAround
+    }//updateBoard
     
 
     /** Pass a draw */
