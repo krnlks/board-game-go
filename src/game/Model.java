@@ -422,8 +422,8 @@ public class Model extends Observable{
         //TODO Bad semantics, state <> player
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
         //TODO lookBoard is not used except in lookAround. Make it local to the latter?
-        int [][] lookBoard = new int [dim][dim];
-        updateBoard(y, x, y, x, getCurrentPlayer(), lookBoard);					//Search for opponent regions to be removed							
+        int [][] adjacentGroups = new int [dim][dim];
+        updateBoard(y, x, y, x, getCurrentPlayer(), adjacentGroups);					//Search for opponent regions to be removed							
 
         //TODO Alternative: Don't initialize last and perform null check every time. But the null check would be only to prevent a null pointer exception in the initial situation. Which version is better?
 
@@ -437,8 +437,8 @@ public class Model extends Observable{
 
 	
     /**
-     * TODO Complete description
-     * <br> TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
+     * TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
+     * <br> TODO: Maybe decouple this and other methods by introducing a method that returns groups (including info if they're black/white)
      * 
      * <p> Central method for processing a move, called after a stone was placed.
      * Identifies groups of opponent stones that don't have a liberty anymore and removes them.
@@ -454,13 +454,13 @@ public class Model extends Observable{
      * @param yNow y-coordinate of the current intersection that has been reached by the recursion
      * @param xNow x-coordinate of the current intersection that has been reached by the recursion
      * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
-     * @param lookBoard a matrix to mark what we find
+     * @param adjacentGroups stores adjacent {@code playerColor} groups that we find 
      * @see #processMove
      * @see #hasGroupLiberty
      */
-    public void updateBoard(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] lookBoard){ //TODO: Looking for what??
+    public void updateBoard(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] adjacentGroups){
         if (       yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim                     //Out of bounds
-                || lookBoard[yNow][xNow] == 1                                            //Already been here
+                || adjacentGroups[yNow][xNow] == 1                                            //Already been here
                 || board[yNow][xNow].getState().equals(IS.State.E)){                     //Found an empty intersection
             return;
         }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){       //Found adjacent stone of opponent color
@@ -481,11 +481,11 @@ public class Model extends Observable{
                 }//for
             }
         }else if (board[yNow][xNow].getState().equals(playerColor)) {             //Found adjacent stone of playerColor
-            lookBoard[yNow][xNow] = 1;                                          
-            updateBoard(yStart, xStart, yNow, xNow-1, playerColor, lookBoard);                           //Look west, north, east, south
-            updateBoard(yStart, xStart, yNow-1, xNow, playerColor, lookBoard);
-            updateBoard(yStart, xStart, yNow, xNow+1, playerColor, lookBoard);
-            updateBoard(yStart, xStart, yNow+1, xNow, playerColor, lookBoard);
+            adjacentGroups[yNow][xNow] = 1;                                          
+            updateBoard(yStart, xStart, yNow, xNow-1, playerColor, adjacentGroups);                           //Look west, north, east, south
+            updateBoard(yStart, xStart, yNow-1, xNow, playerColor, adjacentGroups);
+            updateBoard(yStart, xStart, yNow, xNow+1, playerColor, adjacentGroups);
+            updateBoard(yStart, xStart, yNow+1, xNow, playerColor, adjacentGroups);
         }
     }//lookAround
     
