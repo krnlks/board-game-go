@@ -317,14 +317,14 @@ public class Model extends Observable{
 	/**
 	 * Returns true if the move is suicide, false if it isn't.
 	 * 
-	 * <p> Values for {@code mark} and {@code tmp} follow the meanings documented in {@link #updateBoard}
+	 * <p> Values for {@code mark} and {@code tmp} follow the meanings documented in {@link #findKillOppGroups}
 	 * and are always meant from the perspective of the player parameter that is passed to {@link #hasGroupLiberty}. 
 	 * 
 	 * @param y y-coordinate of the intersection on which a stone shall be placed 
 	 * @param x x-coordinate of the intersection on which a stone shall be placed
 	 * @return true if the move is suicide, false if it isn't
 	 * 
-	 * @see #updateBoard
+	 * @see #findKillOppGroups
 	 * @see #hasGroupLiberty
 	 */
     public boolean isSuicide(int y, int x) {
@@ -362,23 +362,24 @@ public class Model extends Observable{
     
     /**
      * TODO Complete description
-     * <br> TODO Redundant with updateBoard and markRegion???
+     * <br> TODO Redundant with markRegion???
      *
 	 * <p> Returns true if the group of stone {@code [yStart][xStart]} of player {@code playerColor} has a liberty.
+	 * Also stores found stones (both of {@code playerColor} and of their opponent) in {@code mark}. 
      * 
      * @param yStart y-coordinate of the intersection on which a stone was placed
      * @param xStart x-coordinate of the intersection on which a stone was placed
      * @param yNow y-coordinate of the current intersection that has been reached by the recursion
      * @param xNow x-coordinate of the current intersection that has been reached by the recursion
      * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible
-     * @param mark a matrix to mark what we find. The values have the same meaning as in {@link #updateBoard}
+     * @param mark stores found stones (both of {@code playerColor} and of their opponent) in {@code}
      * @return true if the group of stone {@code [yStart][xStart]} of player {@code playerColor} has a liberty
      * 
-     * @see #updateBoard
+     * @see #findKillOppGroups
      * @see #isSuicide
      */
 	public boolean hasGroupLiberty(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] mark){
-	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim){ //Reached border of the board
+	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow >= dim){ //Reached border of the board
 	        return false;                                
 	    }else if (mark[yNow][xNow] == 1 || mark[yNow][xNow] == 2) { //Already been here
 	    	return false;                                
@@ -404,11 +405,11 @@ public class Model extends Observable{
 	
 	//TODO Change from empty corner/edge icon to its counterpart with stone and vice versa.
 	/**
-	 * Backs up the board states and executes the move (i.e. places a stone and calls {@link #lookAround})
+	 * Backs up the board states and executes the move (i.e. places a stone and calls {@link #findKillOppGroups})
 	 * 
 	 * @param y y-coordinate of the intersection on which the stone is being placed
 	 * @param x x-coordinate of the intersection on which the stone is being placed
-	 * @see #lookAround
+	 * @see #findKillOppGroups
 	 */
 	public void processMove(int y, int x) {
 		//Save state of prisoners in case the draw is undone
@@ -421,7 +422,7 @@ public class Model extends Observable{
 		
         //TODO Bad semantics, state <> player
         board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
-        updateBoard(y, x, getCurrentPlayer());                    //Search for opponent regions to be removed
+        findKillOppGroups(y, x, getCurrentPlayer());                    //Search for opponent groups to be removed
 
         lastStone.wasNotPutLast();                //Remove indicator
         lastStone_backup = lastStone;
@@ -435,9 +436,9 @@ public class Model extends Observable{
      * TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
      * <br> TODO: Maybe decouple this and other methods by introducing a method that returns groups (including info if they're black/white)
      * 
-     * <p> Central method for processing a move, called after a stone was placed.
-     * Identifies groups of opponent stones that don't have a liberty anymore and removes them.
-     * In more detail: If an opponent stone is found, the latter searches its group and finds out whether it has a liberty.
+     * <p> Called after a stone was placed. Finds adjacent opponent groups of stones
+     * and removes them if this stone took their last liberty.
+     * In more detail: If an opponent stone is found, the latter determines its group and finds out whether it has a liberty.
      * If the group does not have a liberty it is removed.
      * 
      * <p> {@code mark}:
@@ -450,7 +451,7 @@ public class Model extends Observable{
      * @see #processMove
      * @see #hasGroupLiberty
      */
-    public void updateBoard(int y, int x, IS.State playerColor){
+    public void findKillOppGroups(int y, int x, IS.State playerColor){
         int []yAdj = new int[4];
         yAdj[0] = y;
         yAdj[1] = y-1;
@@ -484,7 +485,7 @@ public class Model extends Observable{
                 }
             }
         }
-    }//updateBoard
+    }
     
 
     /** Pass a draw */
