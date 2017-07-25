@@ -425,6 +425,59 @@ public class Model extends Observable{
         gameCnt++;														//Game counter is set to next player's turn
     }// processMove
 
+	
+    /**
+     * TODO Complete description
+     * <br> TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
+     * <br> TODO lookAround is a really bad name for a method. Change to lookForRegion or merge with hasGroupLiberty (they are similar)
+     * 
+     * <p> Central method for processing a move. The current player's stone "looks around".
+     * If it finds an opponent stone, the latter marks its region and finds out whether it has a liberty.
+     * If its region has no liberty it is removed.
+     * 
+     * <p> For {@code lookBoard} and {@code mark}: 0 means "found empty intersection",
+     * 1 means "found adjacent stone of this player",
+     * 2 means "found adjacent stone of the opponent" 
+     * 
+     * @param yStart y-coordinate of the intersection on which a stone was placed
+     * @param xStart x-coordinate of the intersection on which a stone was placed
+     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
+     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
+     * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
+     * @param lookBoard a matrix to mark what we find
+     * @see #processMove
+     */
+    public void lookAround(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] lookBoard){ //TODO: Looking for what??
+        if (       yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim                     //Out of bounds
+                || lookBoard[yNow][xNow] == 1 || lookBoard[yNow][xNow] == 2              //Already been here
+                || board[yNow][xNow].getState().equals(IS.State.E)){                     //Found an empty intersection
+            return;
+        }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){       //Found adjacent stone of opponent color
+            int [][] mark = new int[dim][dim];                                          //Mark what we find
+            mark[yStart][xStart] = 1;
+            if (!hasGroupLiberty(yNow, xNow, yNow, xNow, getOpponent(playerColor), mark)){  //The opponent group has no liberty and is removed
+                for (int y = 0; y < dim; y++) {
+                    for (int x = 0; x < dim; x++) {
+                        if (mark[y][x] == 2) {
+                            board[y][x].setState(IS.State.E);
+                            if (gameCnt % 2 == 0) {                             //White's move
+                                pris_W++;                                       //White captures the removed black stone
+                            } else {                                            //Black's move
+                                pris_B++;                                       //Black captures the removed white stone
+                            }// if                               
+                        }//if
+                    }//for
+                }//for
+            }
+        }else if (board[yNow][xNow].getState().equals(playerColor)) {             //Found adjacent stone of this color
+            lookBoard[yNow][xNow] = 1;                                          
+            lookAround(yStart, xStart, yNow, xNow-1, playerColor, lookBoard);                           //Look west, north, east, south
+            lookAround(yStart, xStart, yNow-1, xNow, playerColor, lookBoard);
+            lookAround(yStart, xStart, yNow, xNow+1, playerColor, lookBoard);
+            lookAround(yStart, xStart, yNow+1, xNow, playerColor, lookBoard);
+        }
+    }//lookAround
+    
 
     /** Pass a draw */
     public void pass() {
@@ -472,59 +525,6 @@ public class Model extends Observable{
         cpyBoard(board_m2, board_m1);                           
         cpyBoard(board_m3, board_m2);   
 	}
-    
-    
-	//TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
-	//TODO lookAround is a really bad name for a method. Change to lookForRegion or merge with hasGroupLiberty (they are similar)
-    /**
-     * TODO Complete description
-     * 
-     * <p> Central method for processing a move. The current player's stone "looks around".
-     * If it finds an opponent stone, the latter marks its region and finds out whether it has a liberty.
-     * If its region has no liberty it is removed.
-     * 
-     * <p> For {@code lookBoard} and {@code mark}: 0 means "found empty intersection",
-     * 1 means "found adjacent stone of this player",
-     * 2 means "found adjacent stone of the opponent" 
-     * 
-     * @param yStart y-coordinate of the intersection on which a stone was placed
-     * @param xStart x-coordinate of the intersection on which a stone was placed
-     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
-     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
-     * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
-     * @param lookBoard a matrix to mark what we find
-     * @see #processMove
-     */
-    public void lookAround(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] lookBoard){ //TODO: Looking for what??
-	    if (       yNow < 0 || yNow >= dim || xNow < 0 || xNow>= dim                     //Out of bounds
-	            || lookBoard[yNow][xNow] == 1 || lookBoard[yNow][xNow] == 2              //Already been here
-	            || board[yNow][xNow].getState().equals(IS.State.E)){                     //Found an empty intersection
-	        return;
-	    }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){		//Found adjacent stone of opponent color
-	     	int [][] mark = new int[dim][dim];										    //Mark what we find
-	     	mark[yStart][xStart] = 1;
-	    	if (!hasGroupLiberty(yNow, xNow, yNow, xNow, getOpponent(playerColor), mark)){	//The opponent group has no liberty and is removed
-	    	    for (int y = 0; y < dim; y++) {
-	    	        for (int x = 0; x < dim; x++) {
-                        if (mark[y][x] == 2) {
-                            board[y][x].setState(IS.State.E);
-							if (gameCnt % 2 == 0) { 							//White's move
-								pris_W++; 										//White captures the removed black stone
-							} else {											//Black's move
-								pris_B++; 										//Black captures the removed white stone
-							}// if                               
-                        }//if
-                    }//for
-                }//for
-	    	}
-		}else if (board[yNow][xNow].getState().equals(playerColor)) {             //Found adjacent stone of this color
-			lookBoard[yNow][xNow] = 1; 											
-            lookAround(yStart, xStart, yNow, xNow-1, playerColor, lookBoard);     						//Look west, north, east, south
-            lookAround(yStart, xStart, yNow-1, xNow, playerColor, lookBoard);
-            lookAround(yStart, xStart, yNow, xNow+1, playerColor, lookBoard);
-            lookAround(yStart, xStart, yNow+1, xNow, playerColor, lookBoard);
-		}
-    }//lookAround
 	
 
     /**
