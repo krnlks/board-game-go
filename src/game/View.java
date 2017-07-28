@@ -324,7 +324,7 @@ public class View implements Observer{
                 return intersct_crnTL;
             }else if(type.equals(IS.Type.CRN_TR)){
                 return intersct_crnTR;
-            }else if(type.equals(IS.Type.СRN_BL)){
+            }else if(type.equals(IS.Type.CRN_BL)){
                 return intersct_crnBL;
             }else{                                 //Bottom right corner
                 return intersct_crnBR;
@@ -345,7 +345,7 @@ public class View implements Observer{
                     return intersct_crnTL_BL;
                 }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_BL;
-                }else if(type.equals(IS.Type.СRN_BL)){
+                }else if(type.equals(IS.Type.CRN_BL)){
                     return intersct_crnBL_BL;
                 }else{                                 //Bottom right corner
                     return intersct_crnBR_BL;
@@ -365,7 +365,7 @@ public class View implements Observer{
                     return intersct_crnTL_B;
                 }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_B;
-                }else if(type.equals(IS.Type.СRN_BL)){
+                }else if(type.equals(IS.Type.CRN_BL)){
                     return intersct_crnBL_B;
                 }else{                                 //Bottom right corner
                     return intersct_crnBR_B;
@@ -387,7 +387,7 @@ public class View implements Observer{
                     return intersct_crnTL_WL;
                 }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_WL;
-                }else if(type.equals(IS.Type.СRN_BL)){
+                }else if(type.equals(IS.Type.CRN_BL)){
                     return intersct_crnBL_WL;
                 }else{                                //Bottom right corner
                     return intersct_crnBR_WL;
@@ -407,7 +407,7 @@ public class View implements Observer{
                     return intersct_crnTL_W;
                 }else if(type.equals(IS.Type.CRN_TR)){
                     return intersct_crnTR_W;
-                }else if(type.equals(IS.Type.СRN_BL)){
+                }else if(type.equals(IS.Type.CRN_BL)){
                     return intersct_crnBL_W;
                 }else{                                //Bottom right corner
                     return intersct_crnBR_W;

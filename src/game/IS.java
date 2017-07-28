@@ -19,7 +19,7 @@ public class IS {
         /** Center */
         C,
         /** Bottom left corner */
-        СRN_BL, 
+        CRN_BL, 
         /** Bottom right corner */
         CRN_BR,
         /** Top left corner */

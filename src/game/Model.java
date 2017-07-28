@@ -106,7 +106,7 @@ public class Model extends Observable{
         board[0][0] = is;
         is = new IS(IS.Type.CRN_TR);
         board[0][dim-1] = is;
-        is = new IS(IS.Type.СRN_BL);
+        is = new IS(IS.Type.CRN_BL);
         board[dim-1][0] = is;
         is = new IS(IS.Type.CRN_BR);
         board[dim-1][dim-1] = is;
@@ -166,7 +166,10 @@ public class Model extends Observable{
 	    } catch (IOException e) {
 	        // TODO Auto-generated catch block
 	        e.printStackTrace();
-	    }
+	    } catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}//receive
 	
     /**
