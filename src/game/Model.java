@@ -382,10 +382,9 @@ public class Model extends Observable{
      * @see #isSuicide
      */
 	public boolean hasGroupLiberty(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] mark){
-	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow >= dim){ //Reached border of the board
+	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow >= dim         //Reached border of the board
+	            || mark[yNow][xNow] == 1 || mark[yNow][xNow] == 2){    //Already been here 
 	        return false;                                
-	    }else if (mark[yNow][xNow] == 1 || mark[yNow][xNow] == 2) { //Already been here
-	    	return false;                                
 	    }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){ //Found adjacent stone of opponent color
 	    	mark[yNow][xNow] = 2;					 
 	    	return false;
