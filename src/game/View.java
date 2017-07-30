@@ -575,7 +575,7 @@ public class View implements Observer{
                 phase.setText("Please choose an empty intersection!");
             }
         }//actionPerformed
-    }//FieldButtonActionListener
+    }//ISButtonActionListener
     
     //TODO Replace these model calls with one call... Gross! 
     private class PassButtonActionListener implements ActionListener{

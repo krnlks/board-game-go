@@ -398,7 +398,7 @@ public class Model extends Observable{
                         for (int k = 0; k < dim; k++) {
                             if (mark[l][k] == 1) {
                                 board[l][k].setState(IS.State.E);
-                                if (gameCnt % 2 == 0) {                             //White's move
+                                if (getCurrentPlayer().equals(IS.State.W)) {        //White's move
                                     pris_W++;                                       //White captures the removed black stone
                                 } else {                                            //Black's move
                                     pris_B++;                                       //Black captures the removed white stone
@@ -468,14 +468,14 @@ public class Model extends Observable{
 	 */
     public boolean isSuicide(int y, int x) {
         int[][] mark = new int[dim][dim];                                       //Mark what we find
-        return !hasGroupLiberty(y, x, y, x, getCurrentPlayer(), mark);                //If the stone's group has a liberty, it isn't suicide
+        return !hasGroupLiberty(y, x, y, x, getCurrentPlayer(), mark);          //If the stone's group has a liberty, it isn't suicide
     }//isSuicide
     
 
     /** Pass a draw */
     public void pass() {
         backupBoardStates(); 
-        if (this.gameCnt % 2 == 0) { //White passes
+        if (getCurrentPlayer().equals(IS.State.W)) { //White passes
             this.pris_B_b4 = this.pris_B;
             this.pris_B++; //and Black receives a prisoner point
             
@@ -516,15 +516,18 @@ public class Model extends Observable{
 	}
 	
 	private void backupPrisoners(){
-	    this.pris_W_b4 = this.pris_W;
-        this.pris_B_b4 = this.pris_B;
+        if (getCurrentPlayer().equals(IS.State.W)) {
+            this.pris_B_b4 = this.pris_B;
+        } else {
+            this.pris_W_b4 = this.pris_W;
+        }
 	}
 	
 	private void restorePrisoners(){
-        if (getCurrentPlayer().equals(IS.State.B)){         //Depending on the player whose turn it was, his latest prisoners are undone
-            this.pris_W = this.pris_W_b4;                           
-        }else{
+        if (getCurrentPlayer().equals(IS.State.W)){         //Depending on the player whose turn it was, his latest prisoners are undone
             this.pris_B = this.pris_B_b4;               
+        }else{
+            this.pris_W = this.pris_W_b4;                           
         }
 	}
 	
