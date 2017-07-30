@@ -425,21 +425,6 @@ public class View implements Observer{
         }
     }//updatePlayingField
 
-    private void displayResults(){
-        String result;
-        int scrB = model.getScr_B();    //Black's score
-        int scrW = model.getScr_W();    //White's score
-        
-        if (scrB > scrW){
-            result = String.format("Black wins with %d to %d points!", scrB, scrW);
-        }else if (scrW > scrB){
-            result = String.format("White wins with %d to %d points!", scrW, scrB);
-        }else{
-            result = String.format("Draw! Both players scored %d points.", scrW);
-        }
-        JOptionPane.showMessageDialog(gameWindow, result);
-    }//displayResults
-    
     //TODO: This should better be in Model. But then I should improve my observer pattern, too.
     //Is there something like C#'s event Action in java?
     private void recv_wait(){
@@ -496,7 +481,12 @@ public class View implements Observer{
             waiting.setVisible(false);
             updateScorePanel();
             displayResults();
-            gameWindow.dispose();
+//            gameWindow.dispose();
+        }else if (arg1.equals(UpdateMessages.RECVD_QUIT)){
+            System.out.println("View: update: RECVD_QUIT: " + Thread.currentThread().getName());
+            waiting.setVisible(false);
+            phase.setText("Opponent left.");
+            JOptionPane.showMessageDialog(gameWindow, "Your opponent left the game.");
         }else if (arg1.equals(UpdateMessages.RECVD_MOVE)){
             System.out.println("View: update: RECVD_MOVE: " + Thread.currentThread().getName());
             waiting.setVisible(false);
@@ -528,7 +518,7 @@ public class View implements Observer{
 
     private class GameWindowListener implements WindowListener{
         public void windowClosing(WindowEvent e) {
-            //TODO Send Quit to opponent
+            model.send(Constants.SEND_QUIT);
             gameWindow.dispose();
         }
         public void windowActivated(WindowEvent e) {
@@ -548,31 +538,33 @@ public class View implements Observer{
     /** Listens to the {@link ISButton}s on the board */
     private class ISButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            ISButton isB = (ISButton) e.getSource();
-            if (model.isEmptyIntersection(isB.y, isB.x)){
-                if (model.processMove(isB.y, isB.x)){
-                    System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
-                    if (model.getGamecnt() <= 9 || !model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
-                        updateBoard();
-                        updateScorePanel();
-                        System.out.println("View: ISBAL: Updated score panel.");
-                        //This is the event dispatch thread
-                        System.out.println("View: ISBAL: Going to send draw to opponent...");
-                        model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
-                        System.out.println("View: ISBAL: Sent draw to opponent.");
-                        System.out.println("View: ISBAL: Going to wait for opponent's draw...");
-                        recv_wait();
+            if (!model.isGameOver()){
+                ISButton isB = (ISButton) e.getSource();
+                if (model.isEmptyIntersection(isB.y, isB.x)){
+                    if (model.processMove(isB.y, isB.x)){
+                        System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
+                        if (model.getGamecnt() <= 9 || !model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
+                            updateBoard();
+                            updateScorePanel();
+                            System.out.println("View: ISBAL: Updated score panel.");
+                            //This is the event dispatch thread
+                            System.out.println("View: ISBAL: Going to send draw to opponent...");
+                            model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
+                            System.out.println("View: ISBAL: Sent draw to opponent.");
+                            System.out.println("View: ISBAL: Going to wait for opponent's draw...");
+                            recv_wait();
+                        }else{
+                            phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
+                            //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
+                            model.undo();
+                        }
                     }else{
-                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
-                        //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
-                        model.undo();
+                        //TODO Make another label / text field for these notifications
+                        phase.setText("That would be suicide!");
                     }
                 }else{
-                    //TODO Make another label / text field for these notifications
-                    phase.setText("That would be suicide!");
+                    phase.setText("Please choose an empty intersection!");
                 }
-            }else{
-                phase.setText("Please choose an empty intersection!");
             }
         }//actionPerformed
     }//ISButtonActionListener
@@ -580,22 +572,45 @@ public class View implements Observer{
     //TODO Replace these model calls with one call... Gross! 
     private class PassButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            if ( !model.isDoublePass() ){                       //It's a regular pass (no double pass)
-                model.pass();
+            if (!model.isGameOver()){
+                boolean doublePass = model.pass();
                 updateScorePanel(); 
-                model.send(Constants.SEND_PASS);
-                System.out.println("View: PBAL: Sent pass to opponent.");
-                System.out.println("View: PBAL: Going to wait for opponent's draw...");
-                recv_wait();
-            }else{                                              //Both players passed, game is over
-                model.pass();
-                updateScorePanel();
-                model.send(Constants.SEND_DOUBLEPASS);
-                displayResults();
-                gameWindow.dispose();
+                if (!doublePass){
+                    model.send(Constants.SEND_PASS);
+                    System.out.println("View: PBAL: Sent pass to opponent.");
+                    System.out.println("View: PBAL: Going to wait for opponent's draw...");
+                    recv_wait();
+                }else{      //Both players passed, game is over
+                    model.send(Constants.SEND_DOUBLEPASS);
+                    displayResults();
+//                gameWindow.dispose();
+                }
             }
         }//actionPerformed
     }//PassButtonActionListener
+    
+    private void displayResults(){
+        String result;
+        String details;
+        int scrB = model.getScr_B();    //Black's score
+        int scrW = model.getScr_W();    //White's score
+        
+        if (scrB > scrW){
+            result = String.format("Black wins");
+            details = String.format(" with %d to %d points!", scrB, scrW);
+        }else if (scrW > scrB){
+            result = String.format("White wins");
+            details = String.format(" with %d to %d points!", scrW, scrB);
+        }else{
+            result = "Draw!";
+            details = String.format(" Both players scored %d point", scrW);
+            if (scrB > 1)
+                details = details + "s";
+            details = details + ".";
+        }
+        phase.setText(result);
+        JOptionPane.showMessageDialog(gameWindow, result+details);
+    }//displayResults
     
     //TODO Implement a phase for deciding on a local draw (including an undo button) and add a 'Send' button
     //TODO Start implementing MVC cleaner: For now, just call model.undo() (still dirty but hey). Then let the model notify the View, and if, for instance, the move was already undone, display a notification on the board. Do this for pass button and everywhere else, too. 

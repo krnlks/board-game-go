@@ -73,6 +73,7 @@ public class Model extends Observable{
 	boolean whiteGroup;
 	int currentGroup = 0;							  //How many different regions exist
 	int dim = Constants.BOARD_DIM;           //Board dimension (Beginner = 9, Professional = 19)
+	private boolean isGameOver = false;
 	
 	public Model(){
 		gameCnt = 1;                    //The game starts at draw #1
@@ -154,8 +155,14 @@ public class Model extends Observable{
             }else if (recv == Constants.SEND_DOUBLEPASS){
                 System.out.println("Model: receive: Received double pass");
                 pass();
+                isGameOver = true;
                 setChanged();
                 notifyObservers(UpdateMessages.RECVD_DOUBLEPASS);
+            }else if (recv == Constants.SEND_QUIT){
+                System.out.println("Model: receive: Received quit");
+                isGameOver = true;
+                setChanged();
+                notifyObservers(UpdateMessages.RECVD_QUIT);
             }else{
                 int y = recv / dim;
                 int x = recv - dim*y;
@@ -356,9 +363,9 @@ public class Model extends Observable{
     
     /**
      * TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
-     * <br> TODO: Maybe decouple this and other methods by introducing a method that returns groups (including info if they're black/white)
+     * <br> TODO: Maybe decouple this and other methods by introducing a method that returns groups (including info if they're black/white) <p>
      * 
-     * <p> Called after a stone was placed. Finds adjacent opponent groups of stones
+     * Called after a stone was placed. Finds adjacent opponent groups of stones
      * and removes them if this stone took their last liberty.
      * In more detail: If an opponent stone is found, the latter determines its group and finds out whether it has a liberty.
      * If the group does not have a liberty it is removed.
@@ -472,18 +479,32 @@ public class Model extends Observable{
     }//isSuicide
     
 
-    /** Pass a draw */
-    public void pass() {
+    /** 
+     * Pass a draw
+     * @return true if double-pass, false if not 
+     */
+    public boolean pass() {
         backupBoardStates(); 
-        if (getCurrentPlayer().equals(IS.State.W)) { //White passes
-            this.pris_B_b4 = this.pris_B;
-            this.pris_B++; //and Black receives a prisoner point
-            
-        } else { //Black passes
+        int pris_tmp, pris_tmp_b4;
+        if (getCurrentPlayer().equals(IS.State.B)) { //White passes
+            pris_tmp = pris_B;
+            pris_tmp_b4 = pris_B_b4;
             this.pris_W_b4 = this.pris_W;
             this.pris_W++; //and White receives a prisoner point
+        } else { //Black passes
+            pris_tmp = pris_W;
+            pris_tmp_b4 = pris_W_b4;
+            this.pris_B_b4 = this.pris_B;
+            this.pris_B++; //and Black receives a prisoner point
         }
         this.gameCnt++;
+        //TODO: Why does this mess up the score panel and prevents waiting dialog from being shown?
+//        send(Constants.SEND_PASS);
+        
+        if (pris_tmp == pris_tmp_b4 + 1){
+            isGameOver = true;
+        }
+        return isGameOver;
     }//pass
     
     
@@ -516,26 +537,26 @@ public class Model extends Observable{
 	}
 	
 	private void backupPrisoners(){
-        if (getCurrentPlayer().equals(IS.State.W)) {
-            this.pris_B_b4 = this.pris_B;
-        } else {
+        if (getCurrentPlayer().equals(IS.State.B)) {
             this.pris_W_b4 = this.pris_W;
+        } else {
+            this.pris_B_b4 = this.pris_B;
         }
 	}
 	
 	private void restorePrisoners(){
-        if (getCurrentPlayer().equals(IS.State.W)){         //Depending on the player whose turn it was, his latest prisoners are undone
-            this.pris_B = this.pris_B_b4;               
-        }else{
+        if (getCurrentPlayer().equals(IS.State.B)){         //Depending on the player whose turn it was, his latest prisoners are undone
             this.pris_W = this.pris_W_b4;                           
+        }else{
+            this.pris_B = this.pris_B_b4;               
         }
 	}
 	
 
     /**
-     * TODO Improve description
+     * TODO Improve description <p>
      * 
-     * <p> Returns true if two {@code IS[][]} board states are equal with respect to the values of the boards' {@code IS} intersections.
+     * Returns true if two {@code IS[][]} board states are equal with respect to the values of the boards' {@code IS} intersections.
 	 * 
 	 * <p> Used to assure that the undo button is hit only once in a row.
 	 * If {@code board} and {@code board_m1} are already equal, it's not allowed to undo your move.
@@ -558,31 +579,6 @@ public class Model extends Observable{
         }
         return true;
     }//areBoardsEqual
-    
-    
-    /**
-     * Returns true if the draw that is being processed is a double pass.
-     * 
-     * @return true if the draw that is being processed is a double pass
-     */
-    public boolean isDoublePass(){
-    	int pris_tmp;
-    	int pris_tmp_b4;
-    	
-    	if (getCurrentPlayer().equals(IS.State.B)){
-    		pris_tmp = pris_B;
-    		pris_tmp_b4 = pris_B_b4;
-    	}else{
-    		pris_tmp = pris_W;
-    		pris_tmp_b4 = pris_W_b4;
-    	}//if
-    	
-    	if (pris_tmp == pris_tmp_b4 + 1){
-    		return true;
-    	}else{
-    		return false;
-    	}
-    }//isDoublePass
     
     
     /**
@@ -692,6 +688,10 @@ public class Model extends Observable{
     public int getScr_W(){
         return pris_W + ter_W;
     }//getScr_W
+    
+    public boolean isGameOver(){
+        return isGameOver;
+    }
     
     private void printBoards() {
         System.out.println("board_m2:");
