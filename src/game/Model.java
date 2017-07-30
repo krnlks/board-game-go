@@ -284,7 +284,7 @@ public class Model extends Observable{
 	
 	/**
 	 * TODO Complete description
-	 * <br> TODO Redundant with lookAround and hasGroupLiberty???
+	 * <br> TODO Redundant with findKillOppGroups and hasGroupLiberty???
 	 * 
 	 * <p> Mark groups of empty intersections and find out whether they belong to Black or White.
 	 * <br> > 0: belongs to a group, -1: black stone, -2: white stone.
@@ -314,126 +314,46 @@ public class Model extends Observable{
 	        markGroup(y+1, x);                //south
 	    }//if
 	}
-
 	
 	
-	/**
-	 * Returns true if the move is suicide, false if it isn't.
-	 * 
-	 * <p> Values for {@code mark} and {@code tmp} follow the meanings documented in {@link #findKillOppGroups}
-	 * and are always meant from the perspective of the player parameter that is passed to {@link #hasGroupLiberty}. 
-	 * 
-	 * @param y y-coordinate of the intersection on which a stone shall be placed 
-	 * @param x x-coordinate of the intersection on which a stone shall be placed
-	 * @return true if the move is suicide, false if it isn't
-	 * 
-	 * @see #findKillOppGroups
-	 * @see #hasGroupLiberty
-	 */
-    public boolean isSuicide(int y, int x) {
-        int [][] mark = new int[dim][dim];										//Mark what we find
-        if (hasGroupLiberty(y, x, y, x, getCurrentPlayer(), mark)) {				//If the stone's group has a liberty, it isn't suicide
-        	return false;
-        } else {																//Is it really suicide?
-        																		
-            //board for marking intersections from the view of the current player's opponent
-            int [][] tmp = new int[dim][dim]; 
-        																		
-        	tmp[y][x] = 2; //this player's stone
-        	for (y = 0; y < dim; y++){
-        	    for (x = 0; x < dim; x++){
-        			if (mark[y][x] == 2){									//If it's an adjacent opponent stone
-        				if (!hasGroupLiberty(y, x, y, x, getOpponent(getCurrentPlayer()), tmp)){	//If a surrounding opponent group has no liberty,
-        					return false;													//it's no suicide
-        				}
-        				//If the intersection has already been marked,
-        				//clear it for hasGroupLiberty
-        				for (int l=0; l < dim; l++){
-        				    for (int k=0; k < dim; k++){
-        				        if (tmp[l][k] == 1){	
-        				            tmp[l][k] = 0;		
-        				        }
-        				    }
-        				}
-        			}
-        		}
-        	}
-        	return true;
-        }//if
-    }//isSuicide
-    
-    
     /**
-     * TODO Complete description
-     * <br> TODO Redundant with markRegion???
-     *
-	 * <p> Returns true if the group of stone {@code [yStart][xStart]} of player {@code playerColor} has a liberty.
-	 * Also stores found stones (both of {@code playerColor} and of their opponent) in {@code mark}. 
+     * TODO Change from empty corner/edge icon to its counterpart with stone and vice versa. <p>
      * 
-     * @param yStart y-coordinate of the intersection on which a stone was placed
-     * @param xStart x-coordinate of the intersection on which a stone was placed
-     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
-     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
-     * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible
-     * @param mark stores found stones (both of {@code playerColor} and of their opponent) in {@code}
-     * @return true if the group of stone {@code [yStart][xStart]} of player {@code playerColor} has a liberty
+     * Backs up the board states and executes the move (i.e. places a stone and calls {@link #findKillOppGroups})
      * 
+     * @param y y-coordinate of the intersection on which the stone is being placed
+     * @param x x-coordinate of the intersection on which the stone is being placed
+     * @return true if the move is valid (i.e. it's no suicide), false if it isn't
      * @see #findKillOppGroups
      * @see #isSuicide
      */
-	public boolean hasGroupLiberty(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] mark){
-	    if (yNow < 0 || yNow >= dim || xNow < 0 || xNow >= dim         //Reached border of the board
-	            || mark[yNow][xNow] == 1 || mark[yNow][xNow] == 2){    //Already been here 
-	        return false;                                
-	    }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){ //Found adjacent stone of opponent color
-	    	mark[yNow][xNow] = 2;					 
-	    	return false;
-	    }else if (board[yNow][xNow].getState().equals(IS.State.E) && (yStart != yNow || xStart != xNow)){
-	        return true;                                 //Found a liberty which is not the starting intersection
-        }else{                                           //Found adjacent stone of this color
+    public boolean processMove(int y, int x) {
+        //Backup in case the draw is undone
+        backupBoardStates();
+        backupPrisoners();
 
-            mark[yNow][xNow] = 1;					 
-            if (    (hasGroupLiberty(yStart, xStart, yNow, xNow-1, playerColor, mark))     // look west, north, east, south
-                 || (hasGroupLiberty(yStart, xStart, yNow-1, xNow, playerColor, mark))
-                 || (hasGroupLiberty(yStart, xStart, yNow, xNow+1, playerColor, mark)) 
-                 || (hasGroupLiberty(yStart, xStart, yNow+1, xNow, playerColor, mark))) {
-
-				return true;
-            }// if
-			return false;           
-        }//if
-    }
-	
-	
-	//TODO Change from empty corner/edge icon to its counterpart with stone and vice versa.
-	/**
-	 * Backs up the board states and executes the move (i.e. places a stone and calls {@link #findKillOppGroups})
-	 * 
-	 * @param y y-coordinate of the intersection on which the stone is being placed
-	 * @param x x-coordinate of the intersection on which the stone is being placed
-	 * @see #findKillOppGroups
-	 */
-	public void processMove(int y, int x) {
-		//Save state of prisoners in case the draw is undone
-		this.pris_W_b4 = this.pris_W;
-		this.pris_B_b4 = this.pris_B;
-
-		debugBoards();
-    
-		backupBoardStates();
-		
+        printBoards(); //for debugging
+        
         //TODO Bad semantics, state <> player
-        board[y][x].setState(getCurrentPlayer());					        //Put player's stone on empty intersection
-        findKillOppGroups(y, x, getCurrentPlayer());                    //Search for opponent groups to be removed
+        board[y][x].setState(getCurrentPlayer());                           //Put player's stone on empty intersection
+        if (!findKillOppGroups(y, x, getCurrentPlayer())                    //Search for opponent groups to be removed
+                && isSuicide(y, x)){
+            //TODO: Don't set and then unset again (use marker instead)
+            board[y][x].setState(IS.State.E);
+            restoreBoardStates();
+            restorePrisoners();
+            return false;
+        }
 
         lastStone.wasNotPutLast();                //Remove indicator
         lastStone_backup = lastStone;
         lastStone = board[y][x];
        
-        gameCnt++;														//Game counter is set to next player's turn
+        gameCnt++;                                                      //Game counter is set to next player's turn
+        return true;
     }// processMove
-
 	
+    
     /**
      * TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
      * <br> TODO: Maybe decouple this and other methods by introducing a method that returns groups (including info if they're black/white)
@@ -452,8 +372,9 @@ public class Model extends Observable{
      * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
      * @see #processMove
      * @see #hasGroupLiberty
+     * @return true if an opponent group was removed, false if not
      */
-    public void findKillOppGroups(int y, int x, IS.State playerColor){
+    public boolean findKillOppGroups(int y, int x, IS.State playerColor){
         int []yAdj = new int[4];
         yAdj[0] = y;
         yAdj[1] = y-1;
@@ -464,6 +385,7 @@ public class Model extends Observable{
         xAdj[1] = x;
         xAdj[2] = x+1;
         xAdj[3] = x;
+        boolean hasKilledGroup = false;
         for (int i = 0; i < 4; i++){
             if (yAdj[i] < 0 || yAdj[i] >= dim || xAdj[i] < 0 || xAdj[i] >= dim
                     || !board[yAdj[i]][xAdj[i]].getState().equals(getOpponent(playerColor))){
@@ -484,10 +406,70 @@ public class Model extends Observable{
                             }//if
                         }//for
                     }//for
+                    hasKilledGroup = true;
                 }
             }
         }
+        return hasKilledGroup;
     }
+    
+    
+    /**
+     * TODO Complete description
+     * <br> TODO Redundant with markRegion???
+     *
+     * <p> Returns true if the group of stone {@code [yStart][xStart]} of player {@code playerColor} has a liberty.
+     * Also stores found stones (both of {@code playerColor} and of their opponent) in {@code mark}. 
+     * 
+     * @param yStart y-coordinate of the intersection on which a stone was placed
+     * @param xStart x-coordinate of the intersection on which a stone was placed
+     * @param yNow y-coordinate of the current intersection that has been reached by the recursion
+     * @param xNow x-coordinate of the current intersection that has been reached by the recursion
+     * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible
+     * @param mark stores found stones (both of {@code playerColor} and of their opponent) in {@code}
+     * @return true if the group of stone {@code [yStart][xStart]} of player {@code playerColor} has a liberty
+     * 
+     * @see #findKillOppGroups
+     * @see #isSuicide
+     */
+    public boolean hasGroupLiberty(int yStart, int xStart, int yNow, int xNow, IS.State playerColor, int[][] mark){
+        if (yNow < 0 || yNow >= dim || xNow < 0 || xNow >= dim         //Reached border of the board
+                || mark[yNow][xNow] == 1 || mark[yNow][xNow] == 2){    //Already been here 
+            return false;                                
+        }else if (board[yNow][xNow].getState().equals(getOpponent(playerColor))){ //Found adjacent stone of opponent color
+            mark[yNow][xNow] = 2;                    
+            return false;
+        }else if (board[yNow][xNow].getState().equals(IS.State.E) && (yStart != yNow || xStart != xNow)){
+            return true;                                 //Found a liberty which is not the starting intersection
+        }else{                                           //Found adjacent stone of this color
+
+            mark[yNow][xNow] = 1;                    
+            if (    (hasGroupLiberty(yStart, xStart, yNow, xNow-1, playerColor, mark))     // look west, north, east, south
+                 || (hasGroupLiberty(yStart, xStart, yNow-1, xNow, playerColor, mark))
+                 || (hasGroupLiberty(yStart, xStart, yNow, xNow+1, playerColor, mark)) 
+                 || (hasGroupLiberty(yStart, xStart, yNow+1, xNow, playerColor, mark))) {
+
+                return true;
+            }// if
+            return false;           
+        }//if
+    }
+    
+	
+	/**
+	 * Returns true if the move is suicide, false if it isn't.
+	 * 
+	 * @param y y-coordinate of the intersection on which a stone shall be placed 
+	 * @param x x-coordinate of the intersection on which a stone shall be placed
+	 * @return true if the move is suicide, false if it isn't
+	 * 
+	 * @see #findKillOppGroups
+	 * @see #hasGroupLiberty
+	 */
+    public boolean isSuicide(int y, int x) {
+        int[][] mark = new int[dim][dim];                                       //Mark what we find
+        return !hasGroupLiberty(y, x, y, x, getCurrentPlayer(), mark);                //If the stone's group has a liberty, it isn't suicide
+    }//isSuicide
     
 
     /** Pass a draw */
@@ -510,12 +492,8 @@ public class Model extends Observable{
         if (gameCnt > 1 ){                          //If it's the first move, there's nothing to be undone
             
             restoreBoardStates();            
+            restorePrisoners();
             
-            if (getCurrentPlayer().equals(IS.State.B)){         //Depending on the player whose turn it was, his latest prisoners are undone
-                this.pris_W = this.pris_W_b4;                           
-            }else{
-                this.pris_B = this.pris_B_b4;               
-            }
             gameCnt--;                              //Set game count to last turn
             
             lastStone.wasNotPutLast();
@@ -535,6 +513,19 @@ public class Model extends Observable{
         cpyBoard(board_m1, board);                          
         cpyBoard(board_m2, board_m1);                           
         cpyBoard(board_m3, board_m2);   
+	}
+	
+	private void backupPrisoners(){
+	    this.pris_W_b4 = this.pris_W;
+        this.pris_B_b4 = this.pris_B;
+	}
+	
+	private void restorePrisoners(){
+        if (getCurrentPlayer().equals(IS.State.B)){         //Depending on the player whose turn it was, his latest prisoners are undone
+            this.pris_W = this.pris_W_b4;                           
+        }else{
+            this.pris_B = this.pris_B_b4;               
+        }
 	}
 	
 
@@ -699,7 +690,7 @@ public class Model extends Observable{
         return pris_W + ter_W;
     }//getScr_W
     
-    private void debugBoards() {
+    private void printBoards() {
         System.out.println("board_m2:");
         System.out.println(boardToString(board_m2, false) + "\n");
 
