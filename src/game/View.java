@@ -550,14 +550,9 @@ public class View implements Observer{
         public void actionPerformed(ActionEvent e) {
             ISButton isB = (ISButton) e.getSource();
             if (model.isEmptyIntersection(isB.y, isB.x)){
-                if (!model.isSuicide(isB.y, isB.x) ){
+                if (model.processMove(isB.y, isB.x)){
                     System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
-                    model.processMove(isB.y, isB.x);
-                    if (model.getGamecnt() > 9 && model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
-                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
-                        //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
-                        model.undo();
-                    }else{
+                    if (model.getGamecnt() <= 9 || !model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
                         updateBoard();
                         updateScorePanel();
                         System.out.println("View: ISBAL: Updated score panel.");
@@ -567,6 +562,10 @@ public class View implements Observer{
                         System.out.println("View: ISBAL: Sent draw to opponent.");
                         System.out.println("View: ISBAL: Going to wait for opponent's draw...");
                         recv_wait();
+                    }else{
+                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
+                        //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
+                        model.undo();
                     }
                 }else{
                     //TODO Make another label / text field for these notifications
