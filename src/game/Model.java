@@ -73,6 +73,7 @@ public class Model extends Observable{
 	boolean whiteGroup;
 	int currentGroup = 0;							  //How many different regions exist
 	int dim = Constants.BOARD_DIM;           //Board dimension (Beginner = 9, Professional = 19)
+	private boolean isMyTurn;
 	private boolean isGameOver = false;
 	
 	public Model(){
@@ -132,6 +133,7 @@ public class Model extends Observable{
 	}
 	
 	public void send(int b){
+	    isMyTurn = false;
 	    try {
 	        System.out.println("Model: send: Going to send draw...");
             lan.send(b); 
@@ -177,6 +179,7 @@ public class Model extends Observable{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	    isMyTurn = true;
 	}//receive
 	
     /**
@@ -201,13 +204,16 @@ public class Model extends Observable{
 	 * @param server_address empty string if this shall be the server,
 	 * or the address of the remote server if this shall be the client
 	 */
-	public void setLAN_Role(String server_address){
-	    if (server_address.equals("")){
-	        this.lan = new Server(this);
-	        this.player = Player.WHITE;
-	    }else{
-	        this.lan = new Client(this, server_address);
-	        this.player = Player.BLACK;
+	public void setLANRole(String server_address){
+	    if (this.lan == null){
+	        if (server_address.equals("")){
+	            this.lan = new Server(this);
+	            this.player = Player.WHITE;
+	        }else{
+	            this.lan = new Client(this, server_address);
+	            this.player = Player.BLACK;
+	            isMyTurn = true;
+	        }
 	    }
 	}//setLAN_Role
 	
@@ -688,6 +694,10 @@ public class Model extends Observable{
     public int getScr_W(){
         return pris_W + ter_W;
     }//getScr_W
+    
+    public boolean isMyTurn(){
+        return isMyTurn;
+    }
     
     public boolean isGameOver(){
         return isGameOver;

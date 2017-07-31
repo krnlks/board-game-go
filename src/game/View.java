@@ -225,7 +225,7 @@ public class View implements Observer{
         waiting = new JDialog(gameWindow, true);
         waiting.add(new JLabel("Waiting for opponent...", SwingConstants.CENTER));
         waiting.setSize(200, 100);
-        waiting.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+//        waiting.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         
         hostOrJoin();
     }//init
@@ -250,7 +250,7 @@ public class View implements Observer{
                 gameWindow.setTitle("Go - White");
                 //TODO Both for choosing host or join and (after that) choosing stone color: Make it possible to change decision
                 conn_info_host.setText("Waiting...");
-                model.setLAN_Role("");
+                model.setLANRole("");
                 if (model.estbl_LanConn() != 0){
                 	System.out.println("View: hostOrJoin: Starting server failed");
                     System.exit(1);
@@ -266,13 +266,14 @@ public class View implements Observer{
         ActionListener srvAddrList = new ActionListener() { //Create a listener for the server address
             public void actionPerformed(ActionEvent e) {
                 gameWindow.setTitle("Go - Black");
-                model.setLAN_Role(server_addr.getText());
+                model.setLANRole(server_addr.getText());
                 if (model.estbl_LanConn() == 0){
                     System.out.println("View: hostOrJoin: estbl_LanConn() successful");
                     choose.dispose();
                     blackTurn = "My turn";
                     updateScorePanel();
                     whiteTurn = "White's turn";
+                    receive();
                 }else{
                     server_addr.setText("");
                     conn_info_client.setText("Invalid Host");
@@ -427,7 +428,7 @@ public class View implements Observer{
 
     //TODO: This should better be in Model. But then I should improve my observer pattern, too.
     //Is there something like C#'s event Action in java?
-    private void recv_wait(){
+    private void receive(){
         //Schedule a SwingWorker for execution on a worker thread because it can take some time until the opponent
         //makes his draw.
         SwingWorker worker = new SwingWorker(){
@@ -438,10 +439,6 @@ public class View implements Observer{
             }
         };
         worker.execute();
-        //Hinder the player from performing an action until it's their turn again
-        //Called at the end because it blocks until setVisible(false) is called after receiving the opponent's draw
-        //Blocks when it stands alone and won't become visible when called from inside SwingUtilities.invokeLater()
-        waiting.setVisible(true);
     }//recv_wait
     
     public void updateScorePanel(){
@@ -473,9 +470,10 @@ public class View implements Observer{
             System.out.println("View: update: Disposed choose");
             waiting.setVisible(true);
         }else if (arg1.equals(UpdateMessages.RECVD_PASS)){
+            receive(); //Check for opp messages / next move already
             System.out.println("View: update: RECVD_PASS: " + Thread.currentThread().getName());
             waiting.setVisible(false);
-            updateScorePanel();    
+            updateScorePanel();
         }else if (arg1.equals(UpdateMessages.RECVD_DOUBLEPASS)){
             System.out.println("View: update: RECVD_DOUBLEPASS: " + Thread.currentThread().getName());
             waiting.setVisible(false);
@@ -488,6 +486,7 @@ public class View implements Observer{
             phase.setText("Opponent left.");
             JOptionPane.showMessageDialog(gameWindow, "Your opponent left the game.");
         }else if (arg1.equals(UpdateMessages.RECVD_MOVE)){
+            receive(); //Check for opp messages / next move already
             System.out.println("View: update: RECVD_MOVE: " + Thread.currentThread().getName());
             waiting.setVisible(false);
             updateBoard();
@@ -518,7 +517,8 @@ public class View implements Observer{
 
     private class GameWindowListener implements WindowListener{
         public void windowClosing(WindowEvent e) {
-            model.send(Constants.SEND_QUIT);
+            if (!model.isGameOver()) //if opponent still there
+                model.send(Constants.SEND_QUIT);
             gameWindow.dispose();
         }
         public void windowActivated(WindowEvent e) {
@@ -538,33 +538,34 @@ public class View implements Observer{
     /** Listens to the {@link ISButton}s on the board */
     private class ISButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            if (!model.isGameOver()){
-                ISButton isB = (ISButton) e.getSource();
-                if (model.isEmptyIntersection(isB.y, isB.x)){
-                    if (model.processMove(isB.y, isB.x)){
-                        System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
-                        if (model.getGamecnt() <= 9 || !model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
-                            updateBoard();
-                            updateScorePanel();
-                            System.out.println("View: ISBAL: Updated score panel.");
-                            //This is the event dispatch thread
-                            System.out.println("View: ISBAL: Going to send draw to opponent...");
-                            model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
-                            System.out.println("View: ISBAL: Sent draw to opponent.");
-                            System.out.println("View: ISBAL: Going to wait for opponent's draw...");
-                            recv_wait();
-                        }else{
-                            phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
-                            //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
-                            model.undo();
-                        }
+            if (!model.isMyTurn() || model.isGameOver()){
+                return;
+            }
+            ISButton isB = (ISButton) e.getSource();
+            if (model.isEmptyIntersection(isB.y, isB.x)){
+                if (model.processMove(isB.y, isB.x)){
+                    System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
+                    if (model.getGamecnt() <= 9 || !model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
+                        updateBoard();
+                        updateScorePanel();
+                        System.out.println("View: ISBAL: Updated score panel.");
+                        //This is the event dispatch thread
+                        System.out.println("View: ISBAL: Going to send draw to opponent...");
+                        model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
+                        System.out.println("View: ISBAL: Sent draw to opponent.");
+                        System.out.println("View: ISBAL: Going to wait for opponent's draw...");
+                        waiting.setVisible(true);
                     }else{
-                        //TODO Make another label / text field for these notifications
-                        phase.setText("That would be suicide!");
+                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
+                        //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
+                        model.undo();
                     }
                 }else{
-                    phase.setText("Please choose an empty intersection!");
+                    //TODO Make another label / text field for these notifications
+                    phase.setText("That would be suicide!");
                 }
+            }else{
+                phase.setText("Please choose an empty intersection!");
             }
         }//actionPerformed
     }//ISButtonActionListener
@@ -572,19 +573,20 @@ public class View implements Observer{
     //TODO Replace these model calls with one call... Gross! 
     private class PassButtonActionListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            if (!model.isGameOver()){
-                boolean doublePass = model.pass();
-                updateScorePanel(); 
-                if (!doublePass){
-                    model.send(Constants.SEND_PASS);
-                    System.out.println("View: PBAL: Sent pass to opponent.");
-                    System.out.println("View: PBAL: Going to wait for opponent's draw...");
-                    recv_wait();
-                }else{      //Both players passed, game is over
-                    model.send(Constants.SEND_DOUBLEPASS);
-                    displayResults();
+            if (!model.isMyTurn() || model.isGameOver()){
+                return;
+            }
+            boolean doublePass = model.pass();
+            updateScorePanel(); 
+            if (!doublePass){
+                model.send(Constants.SEND_PASS);
+                System.out.println("View: PBAL: Sent pass to opponent.");
+                System.out.println("View: PBAL: Going to wait for opponent's draw...");
+                waiting.setVisible(true);
+            }else{      //Both players passed, game is over
+                model.send(Constants.SEND_DOUBLEPASS);
+                displayResults();
 //                gameWindow.dispose();
-                }
             }
         }//actionPerformed
     }//PassButtonActionListener
