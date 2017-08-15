@@ -11,8 +11,6 @@ import multiplayer.UpdateMessages;
 
 /* Ideas for improvement:
  * - Global variables
- * - markRegion() returns true/false -> not what you would expect 
- * - Return value of markRegion is never used -> OK to "abuse" it for recursion?
  */
 
 //TODO Look at more complex methods in Model and write good and clear description
