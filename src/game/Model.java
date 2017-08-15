@@ -10,11 +10,9 @@ import multiplayer.Server;
 import multiplayer.UpdateMessages;
 
 /* Ideas for improvement:
- * - isNoSuicide (loops)
  * - Global variables
  * - markRegion() returns true/false -> not what you would expect 
- * - Return value of markRegion is never used -> OK to "abuse" it for recursion? 
- * - Rekursionen k�nnen bestimmt noch zusammengefasst werden
+ * - Return value of markRegion is never used -> OK to "abuse" it for recursion?
  */
 
 //TODO Look at more complex methods in Model and write good and clear description
@@ -332,11 +330,15 @@ public class Model extends Observable{
     /**
      * TODO Change from empty corner/edge icon to its counterpart with stone and vice versa. <p>
      * 
-     * Backs up the board states and executes the move (i.e. places a stone and calls {@link #findKillOppGroups})
+     * Performs a non-pass move, i.e.
+     * <br> places the stone,
+     * <br> finds adjacent opponent groups and removes them if this stone is taking their last liberty,
+     * <br> if no enemy group was removed, determines whether this move is suicide (if an enemy group was removed, this move can't be suicide), 
+     * <br> and if yes, rolls back the changes that this move has made.
      * 
      * @param y y-coordinate of the intersection on which the stone is being placed
      * @param x x-coordinate of the intersection on which the stone is being placed
-     * @return true if the move is valid (i.e. it's no suicide), false if it isn't
+     * @return true if the move is no suicide and has been performed, false if it would be suicide and therefore hasn't been performed
      * @see #findKillOppGroups
      * @see #isSuicide
      */

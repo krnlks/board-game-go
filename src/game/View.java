@@ -16,6 +16,7 @@ import multiplayer.UpdateMessages;
 //TODO [med] Adjust size of playing field depending on chosen board dimension (and size of screen, if possible). I.e., if possible, choose a dynamic size instead of static like currently 
 //TODO [low] Add labels with letters and number as coordinates around of the playing field (or only above and left of it)
 //TODO Use a loop and a map for the intersection-ImageIcons
+//TODO Maybe don't store board states, or at least don't use board_m2 for comparison to detect ko. Instead, if only one stone is put and one is removed in a move, save only the forbidden position for the next move
 
 /**
  * @author Lukas Kern
