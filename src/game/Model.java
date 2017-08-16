@@ -51,6 +51,8 @@ public class Model extends Observable{
 	private IS[][] board;
 	/** The previous ("minus 1") state of the board. board is set to this when a move is undone. */
 	private IS[][] board_m1;
+	/* TODO Maybe don't store board states, or at least don't use board_m2 for comparison to detect ko. Instead, if only one stone is put and one is removed in a move, save only the forbidden position for the next move
+	Ein Ko setzt voraus, dass sowohl nur ein einzelner Stein schlägt, als auch nur ein einzelner geschlagen wird. [...] - https://de.wikipedia.org/wiki/K%C5%8D */
 	/**
 	 * The second last ("minus 2") state of the board.
 	 * Compared to board to detect illegal move in "ko"-situation.
