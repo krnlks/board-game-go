@@ -73,19 +73,6 @@ public class IS {
             wasPutLast = true;
     }
     
-    public void setBlack(){
-    	setState(State.B);
-    }
-    
-    public void setWhite(){
-    	setState(State.W);
-    }
-    
-    /** Sets this intersection to empty */ 
-    public void setEmpty(){
-    	setState(State.E);
-    }
-    
     /** Was the last stone that was played put on this intersection? */
     public boolean wasPutLast(){
         return wasPutLast;

@@ -1,17 +1,13 @@
 package game;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Observable;
 
-import game.IS.State;
 import multiplayer.Client;
 import multiplayer.LAN_Conn;
 import multiplayer.Server;
 import multiplayer.UpdateMessages;
-import sun.reflect.LangReflectAccess;
 
 /* Ideas for improvement:
  * - Global variables
@@ -47,7 +43,7 @@ public class Model extends Observable{
      * <p> TODO Also used for something else (like comparing board states)? Maybe there's a better solution. 
      */
 	private int gameCnt;
-	//TODO: Maybe move the different board states to one IS[][][]
+	//TODO: Maybe move the 4 board states to one IS[][][]
 	/**
 	 * The state of the board represented by the state of its intersections.
 	 * (0,0) is the top left corner of the board.
@@ -55,11 +51,22 @@ public class Model extends Observable{
 	private IS[][] board;
 	/** The previous ("minus 1") state of the board. board is set to this when a move is undone. */
 	private IS[][] board_m1;
+	/* TODO Maybe don't store board states, or at least don't use board_m2 for comparison to detect ko. Instead, if only one stone is put and one is removed in a move, save only the forbidden position for the next move
+	Ein Ko setzt voraus, dass sowohl nur ein einzelner Stein schlägt, als auch nur ein einzelner geschlagen wird. [...] - https://de.wikipedia.org/wiki/K%C5%8D */
+	/**
+	 * The second last ("minus 2") state of the board.
+	 * Compared to board to detect illegal move in "ko"-situation.
+	 */
+	private IS[][] board_m2;
+	/**
+	 * The third last ("minus 3") state of the board.
+	 * Used as a backup for board_m2 when a locally processed move is undone because it's invalid.
+	 */
+	private IS[][] board_m3;
 	//TODO: Convert to IS[] lastStones so that boardToString() can mark previous last stones correctly
-	private Position playedLast = new Position(0, 0); //Position where the last stone was put
-	private Position played2ndLast = new Position(-1, -1); //used e.g. when a locally processed move must be undone
-	private Position killedLast = new Position(-1, -1);
-	private int lastKillCount = 0;
+	private IS lastStone;                     //Intersection that the last stone was put on
+	private IS lastStone_backup;                     //back up of last in for when a locally processed move must be undone
+	int[][] mark;                            //Used to mark regions of each player
 	boolean blackGroup;
 	boolean whiteGroup;
 	int currentGroup = 0;							  //How many different regions exist
@@ -69,12 +76,18 @@ public class Model extends Observable{
 	
 	public Model(){
 		gameCnt = 1;                    //The game starts at draw #1
-		//Create board with empty intersections
+		//Create boards with empty intersections
 		board = new IS[dim][dim];
 		board_m1 = new IS[dim][dim];
+		board_m2 = new IS[dim][dim];
+		board_m3 = new IS[dim][dim];
 		
 		initBoard(board);
 		initBoard(board_m1);
+		initBoard(board_m2);
+		initBoard(board_m3);
+        
+        lastStone = board[0][0]; //Initialize in order to prevent null pointer exception in processMove
 	}//Model constructor
 	
 	private void initBoard(IS[][] board){
@@ -124,6 +137,7 @@ public class Model extends Observable{
             lan.send(b); 
             System.out.println("Model: send: Sent draw");
 	    } catch (IOException e) {
+	        // TODO Auto-generated catch block
 	        e.printStackTrace();
 	    }
 	}//send
@@ -157,8 +171,10 @@ public class Model extends Observable{
                 notifyObservers(UpdateMessages.RECVD_MOVE);
             }
 	    } catch (IOException e) {
+	        // TODO Auto-generated catch block
 	        e.printStackTrace();
 	    } catch (InterruptedException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	    isMyTurn = true;
@@ -198,14 +214,56 @@ public class Model extends Observable{
 	        }
 	    }
 	}//setLAN_Role
+	
+	
+	public int getGamecnt() {
+	    return gameCnt;
+	}//getGamecnt
+	
+    public IS getIntersection(int y, int x) {
+        return board[y][x];
+    }// getIntersection
+    
+    public IS getIntersectionB4(int y, int x){
+        return board_m1[y][x];
+    }//getCpyIntersection
+ 
+    public Player getMyPlayer(){
+        return player;
+    }
+    
+    //Can only be set once
+    public void setMyPlayer(Player player){
+        this.player = this.player == null ? player : this.player;
+    }
+    
+    //TODO This doesn't return the Player but the "color of the stone on an intersection"(?!?!) -> Either change return type to Player or create Enum Stone that doesn't contain E (empty)  
+    public IS.State getCurrentPlayer(){       //Getting the color of the player whose turn it is
+        if (gameCnt % 2 == 0){
+            return IS.State.W;
+        }else{
+            return IS.State.B;
+        }
+    }//getPlayer
+    
+    //TODO Currently this doesn't get the opponent but the state of the intersection (which could also be empty but let's hope it's never). Either change return type to Player(color) or change the way it is called/used!
+    public IS.State getOpponent(IS.State state){       //Gets the color of the specified color's opponent
+        if (state == IS.State.W){
+            return IS.State.B;
+        }else if(state == IS.State.B){
+            return IS.State.W;
+        }else{
+            System.out.println("This should not have happened.");
+            return null;
+        }
+    }//getOpponent
 
     
     /**
-	 * Calculate both players' territory on the board
+	 * Get both players' territory on the board
      */
-	public void calcTerritory(){
-		int[][] mark = new int[dim][dim];         //Used to mark regions of each player
-												  //Create a copy of the board to mark empty intersections
+	public void getTerritory(){
+		mark = new int[dim][dim];                 //Create a copy of the board to mark empty intersections
 		ter_B = 0;
 	    ter_W = 0;
 	    currentGroup = 0;						  //Number of current region (1-81)
@@ -215,8 +273,7 @@ public class Model extends Observable{
 	            blackGroup = false;               //Reset region marker
 	            whiteGroup = false;               //Reset region marker
 	            currentGroup++;				   //Mark intersections of an empty region in isEmptyRegion() as a specific region
-	            
-	            markGroup(y, x, mark);
+	            markGroup(y, x);
 	            
 	            int cnt = 0;
 	            for (int[] ia : mark){
@@ -233,7 +290,7 @@ public class Model extends Observable{
 	            }//if
 	        }//for
 	    }//for
-	}//calcTerritory
+	}//getTerritory
 
 	
 	/**
@@ -245,9 +302,8 @@ public class Model extends Observable{
 	 * 
 	 * @param y
 	 * @param x
-	 * @param mark 
 	 */
-	public void markGroup(int y, int x, int[][] mark){        
+	public void markGroup(int y, int x){        
 		if (   y < 0 || y >= dim || x < 0 || x >= dim //Reached border of game table
 		    || mark[y][x] > 0 ){                      //Found already marked intersection
 		    return;
@@ -263,10 +319,10 @@ public class Model extends Observable{
             mark[y][x] = -2;
 	    }else{
 	        mark[y][x] = currentGroup;        //Mark the empty intersection as part of the current region
-	        markGroup(y, x-1, mark);                //Look west
-	        markGroup(y-1, x, mark);                //north
-	        markGroup(y, x+1, mark);                //east
-	        markGroup(y+1, x, mark);                //south
+	        markGroup(y, x-1);                //Look west
+	        markGroup(y-1, x);                //north
+	        markGroup(y, x+1);                //east
+	        markGroup(y+1, x);                //south
 	    }//if
 	}
 	
@@ -282,32 +338,38 @@ public class Model extends Observable{
      * 
      * @param y y-coordinate of the intersection on which the stone is being placed
      * @param x x-coordinate of the intersection on which the stone is being placed
-     * @return 
+     * @return true if the move is no suicide and has been performed, false if it would be suicide and therefore hasn't been performed
      * @see #findKillOppGroups
      * @see #isSuicide
      */
-    public MoveReturn processMove(int y, int x) {
-//        //Backup in case the move is undone
-//        backupBoardStates();
-//        backupPrisoners();
-        
+    public boolean processMove(int y, int x) {
+        //Backup in case the draw is undone
+        backupBoardStates();
+        backupPrisoners();
+
         printBoards(); //for debugging
         
         //TODO Bad semantics, state <> player
-        MoveReturn mr = findKillOppGroups(y, x, getCurrentPlayer());
-        if (mr.equals(MoveReturn.KO) || mr.equals(MoveReturn.SUICIDE))
-    		return mr;
-        
-        board[playedLast.getY()][playedLast.getX()].wasNotPutLast(); //Remove indicator
-        played2ndLast.set(playedLast);
-        playedLast.set(y, x);
-        
-        gameCnt++;  //Game counter is set to next player's turn
-        return MoveReturn.OK;
-    }// processMove
+        board[y][x].setState(getCurrentPlayer());                           //Put player's stone on empty intersection
+        if (!findKillOppGroups(y, x, getCurrentPlayer())                    //Search for opponent groups to be removed
+                && isSuicide(y, x)){
+            //TODO: Don't set and then unset again (use marker instead)
+            board[y][x].setState(IS.State.E);
+            restoreBoardStates();
+            restorePrisoners();
+            return false;
+        }
 
+        lastStone.wasNotPutLast();                //Remove indicator
+        lastStone_backup = lastStone;
+        lastStone = board[y][x];
+       
+        gameCnt++;                                                      //Game counter is set to next player's turn
+        return true;
+    }// processMove
+	
     
-	/**
+    /**
      * TODO Change data type of playerColor to something more appropriate (like Player or Player.Color)
      * <br> TODO: Maybe decouple this and other methods by introducing a method that returns groups (including info if they're black/white) <p>
      * 
@@ -325,55 +387,45 @@ public class Model extends Observable{
      * @param playerColor a player's color ({@code IS.State.B} or {@code IS.State.W}). Never use {@code IS.State.E}! Type Player or PlayerColor would be more appropriate but IS.State is more compatible 
      * @see #processMove
      * @see #hasGroupLiberty
-     * @return {@link MoveReturn} OK if the move is valid, KO if it's invalid due to ko-situation, SUICIDE if it would be suicide
+     * @return true if an opponent group was removed, false if not
      */
-    public MoveReturn findKillOppGroups(int y, int x, IS.State playerColor){
-    	Position killed = new Position(-1, -1);
-    	int killCount = 0;
-    	
-    	board[y][x].setState(getCurrentPlayer());      //Put player's stone on empty intersection
-    	Position[] adj = getAdjPositions(y, x);
-        for (Position coordinate : adj) {
-            if (board[coordinate.getY()][coordinate.getX()].getState().equals(getOpponent(playerColor))){
+    public boolean findKillOppGroups(int y, int x, IS.State playerColor){
+        int []yAdj = new int[4];
+        yAdj[0] = y;
+        yAdj[1] = y-1;
+        yAdj[2] = y;
+        yAdj[3] = y+1;
+        int []xAdj = new int[4];
+        xAdj[0] = x-1;
+        xAdj[1] = x;
+        xAdj[2] = x+1;
+        xAdj[3] = x;
+        boolean hasKilledGroup = false;
+        for (int i = 0; i < 4; i++){
+            if (yAdj[i] < 0 || yAdj[i] >= dim || xAdj[i] < 0 || xAdj[i] >= dim
+                    || !board[yAdj[i]][xAdj[i]].getState().equals(getOpponent(playerColor))){
+                continue;
+            }else{
                 int [][] mark = new int[dim][dim];                                          //Mark what we find
                 mark[y][x] = 2; //mark our stone as an opponent's stone for hasGroupLiberty
-                if (!hasGroupLiberty(coordinate.getY(), coordinate.getX(), coordinate.getY(), coordinate.getX(), getOpponent(playerColor), mark)){  //If the opponent group doesn't have a liberty,
+                if (!hasGroupLiberty(yAdj[i], xAdj[i], yAdj[i], xAdj[i], getOpponent(playerColor), mark)){  //If the opponent group doesn't have a liberty,
                     for (int l = 0; l < dim; l++) {                                             //remove it.
                         for (int k = 0; k < dim; k++) {
                             if (mark[l][k] == 1) {
-                				board[l][k].setEmpty();
-                				killed.set(l, k);
-                				killCount++;
+                                board[l][k].setState(IS.State.E);
+                                if (getCurrentPlayer().equals(IS.State.W)) {        //White's move
+                                    pris_W++;                                       //White captures the removed black stone
+                                } else {                                            //Black's move
+                                    pris_B++;                                       //Black captures the removed white stone
+                                }// if                               
                             }//if
                         }//for
                     }//for
+                    hasKilledGroup = true;
                 }
             }
         }
-        if (killCount == 0 && isSuicide(y, x)){
-        	board[y][x].setEmpty();
-            return MoveReturn.SUICIDE;
-        }
-        if (killCount == 1 && lastKillCount == 1
-        		&& killedLast.equals(new Position(y, x))){
-    		board[y][x].setEmpty();
-    		board[killed.getY()][killed.getX()].setState(getOpponent(getCurrentPlayer()));
-    		return MoveReturn.KO;
-    	}
-        if (killCount > 0){
-        	if (getCurrentPlayer().equals(IS.State.W)) {        //White's move
-        		pris_W += killCount;                                       //White captures the removed black stone
-        	} else {                                            //Black's move
-        		pris_B += killCount;                                       //Black captures the removed white stone
-        	}
-        	if (killCount == 1){ 
-        		killedLast.set(killed);
-        	}else{ //if more than one stone was killed, next round can't be ko
-        		killedLast.set(-1, -1);
-        	}
-        }
-        lastKillCount = killCount;
-        return MoveReturn.OK;
+        return hasKilledGroup;
     }
     
     
@@ -473,19 +525,23 @@ public class Model extends Observable{
             
             gameCnt--;                              //Set game count to last turn
             
-            board[playedLast.getY()][playedLast.getX()].wasNotPutLast();
-            playedLast.set(played2ndLast);
-            board[playedLast.getY()][playedLast.getX()].wasPutLast();
+            lastStone.wasNotPutLast();
+            lastStone = lastStone_backup;
+            lastStone.wasPutLast();
         }
     }//undo
 	
 
 	private void backupBoardStates(){
+	    cpyBoard(board_m2, board_m3);
+	    cpyBoard(board_m1, board_m2);
 	    cpyBoard(board, board_m1);
 	}
 	
 	private void restoreBoardStates(){
         cpyBoard(board_m1, board);                          
+        cpyBoard(board_m2, board_m1);                           
+        cpyBoard(board_m3, board_m2);   
 	}
 	
 	private void backupPrisoners(){
@@ -534,43 +590,24 @@ public class Model extends Observable{
     
     
     /**
-     * Returns true if board[y][x] is an empty intersection.
+     * Returns true if the player is trying to put his stone on an empty intersection.
      * 
      * @param y 
      * @param x
-     * @return true if board[y][x] is an empty intersection
+     * @return true if the player is trying to put his stone on an empty intersection
      */
 	public boolean isEmptyIntersection(int y, int x){
-	    return (board[y][x].getState() == IS.State.E);    
+	    if (board[y][x].getState() == IS.State.E) {    
+	        return true;
+	    }else{
+	        return false;
+	    }
 	}//isEmptyIntersection
 	
 	
-	/** @return all positions adjacent to (y,x) (less than 4
-	 * if (y,x) is at the board rim or in a corner) */
-	public Position[] getAdjPositions(int y, int x){
-        List<Position> adj = new ArrayList<Position>();
-		int []yAdj = new int[4];
-        yAdj[0] = y;
-        yAdj[1] = y-1;
-        yAdj[2] = y;
-        yAdj[3] = y+1;
-        int []xAdj = new int[4];
-        xAdj[0] = x-1;
-        xAdj[1] = x;
-        xAdj[2] = x+1;
-        xAdj[3] = x;
-        for (int i = 0; i < 4; i++){
-            if (yAdj[i] < 0 || yAdj[i] >= dim || xAdj[i] < 0 || xAdj[i] >= dim)
-                continue;
-            adj.add(new Position(yAdj[i], xAdj[i]));
-        }
-        return adj.toArray(new Position[adj.size()]);
-	}
-	
-	
 	/**
-	 * TODO Complete description <p>
-	 * 
+	 * TODO Complete description
+	 * <br><br>
 	 * Copy the whole board. Used while either processing or undoing a move as well as in initialization 
 	 * 
 	 * @param src
@@ -583,7 +620,7 @@ public class Model extends Observable{
                     dest[y][x].setState(src[y][x].getState());
             }            
         }
-    }
+    }//cpyField
 
 	//TODO Guess it's not OK to work around a 'protected' qualifier like this...
     public void setChanged1() {
@@ -595,6 +632,7 @@ public class Model extends Observable{
     }//notifyObservers2
     
     /**
+     * 
      * @param board
      * @param orientations whether to include the intersections' orientations or not
      * @return
@@ -618,42 +656,46 @@ public class Model extends Observable{
         return "\nModel [lan=" + lan + ", ter_B=" + ter_B + ", ter_W=" + ter_W + ", pris_B="
                 + pris_B + ", pris_W=" + pris_W + ", pris_B_b4=" + pris_B_b4 + ", pris_W_b4=" + pris_W_b4 + ", gamecnt="
                 + gameCnt + ",\nboard=\n" + boardToString(board, false) + ",\nboard_b4=\n" + boardToString(board_m1, false)
-                + ",\ntmp_4_ko=\n" /*+ boardToString(board_m2, false)*/
-                + ",\nblackGroup=" + blackGroup + ", whiteGroup=" + whiteGroup + ", currentRegion=" + currentGroup
+                + ",\ntmp_4_ko=\n" + boardToString(board_m2, false) + ",\nboardCpy=\n" + Arrays.toString(mark)
+                + ",\nblackRegion=" + blackGroup + ", whiteRegion=" + whiteGroup + ", currentRegion=" + currentGroup
                 + ", dim=" + dim + "]\n";
     }
     
     public IS[][] getBoard() {
         return board;
-    }
+    }//getFields
 
     public IS[][] getBoard_m1() {
         return board_m1;
-    }
+    }//getFields_b4
     
+    public IS[][] getBoard_m2(){
+        return board_m2;
+    }//getTmp_4_ko
+
     public int getTer_B() {
         return ter_B;
-    }
+    }//getTer_B
 
     public int getTer_W() {
         return ter_W;
-    }
+    }//getTer_W
 
     public int getPris_B() {
         return pris_B;
-    }
+    }//getPris_B
 
     public int getPris_W() {
         return pris_W;
-    }
+    }//getPris_W
 
     public int getScr_B(){
         return pris_B + ter_B;
-    }
+    }//getScr_B
     
     public int getScr_W(){
         return pris_W + ter_W;
-    }
+    }//getScr_W
     
     public boolean isMyTurn(){
         return isMyTurn;
@@ -663,56 +705,15 @@ public class Model extends Observable{
         return isGameOver;
     }
     
-	public int getGamecnt() {
-	    return gameCnt;
-	}
-	
-    public IS getIntersection(int y, int x) {
-        return board[y][x];
-    }// getIntersection
- 
-    public Player getMyPlayer(){
-        return player;
-    }
-    
-    //Can only be set once
-    public void setMyPlayer(Player player){
-        this.player = this.player == null ? player : this.player;
-    }
-    
-    //TODO This doesn't return the Player but the "color of the stone on an intersection"(?!?!) -> Either change return type to Player or create Enum Stone that doesn't contain E (empty)  
-    public IS.State getCurrentPlayer(){       //Getting the color of the player whose turn it is
-        if (gameCnt % 2 == 0){
-            return IS.State.W;
-        }else{
-            return IS.State.B;
-        }
-    }//getPlayer
-    
-    //TODO Currently this doesn't get the opponent but the state of the intersection (which could also be empty but let's hope it's never). Either change return type to Player(color) or change the way it is called/used!
-    public IS.State getOpponent(IS.State state){       //Gets the color of the specified color's opponent
-        if (state == IS.State.W){
-            return IS.State.B;
-        }else if(state == IS.State.B){
-            return IS.State.W;
-        }else{
-            System.out.println("This should not have happened.");
-            return null;
-        }
-    }//getOpponent
-    
     private void printBoards() {
-//        System.out.println("board_m2:");
-//        System.out.println(boardToString(board_m2, false) + "\n");
+        System.out.println("board_m2:");
+        System.out.println(boardToString(board_m2, false) + "\n");
 
-//        System.out.println("board_m1:");
-//        System.out.println(boardToString(board_m1, false) + "\n");
+        System.out.println("board_m1:");
+        System.out.println(boardToString(board_m1, false) + "\n");
         
         System.out.println("board:");
         System.out.println(boardToString(board, false) + "\n");
     }
-    
-    public enum MoveReturn {
-    	OK, SUICIDE, KO
-    }
+
 }//Model

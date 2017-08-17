@@ -442,7 +442,7 @@ public class View implements Observer{
     }//recv_wait
     
     public void updateScorePanel(){
-        model.calcTerritory();
+        model.getTerritory();
         ter_B.setText(String.format("%d", model.getTer_B()));
         ter_W.setText(String.format("%d", model.getTer_W()));
         
@@ -543,24 +543,27 @@ public class View implements Observer{
             }
             ISButton isB = (ISButton) e.getSource();
             if (model.isEmptyIntersection(isB.y, isB.x)){
-        		Model.MoveReturn mr = model.processMove(isB.y, isB.x); 
-        		if (mr.equals(Model.MoveReturn.OK)){
-        	        System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
-    				updateBoard();
-    				updateScorePanel();
-    				System.out.println("View: ISBAL: Updated score panel.");
-    				//This is the event dispatch thread
-    				System.out.println("View: ISBAL: Going to send draw to opponent...");
-    				model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
-    				System.out.println("View: ISBAL: Sent draw to opponent.");
-    				System.out.println("View: ISBAL: Going to wait for opponent's draw...");
-    				waiting.setVisible(true);
-        		}else if (mr.equals(Model.MoveReturn.KO)){
-        			//TODO Make another label / text field for these notifications
-        			phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
-        		}else if (mr.equals(Model.MoveReturn.SUICIDE)){
-        			phase.setText("That would be suicide!");
-        		}
+                if (model.processMove(isB.y, isB.x)){
+                    System.out.println("\nView: ISBAL: Draw #" + model.getGamecnt());
+                    if (model.getGamecnt() <= 9 || !model.areBoardsEqual(model.getBoard(), model.getBoard_m2())){
+                        updateBoard();
+                        updateScorePanel();
+                        System.out.println("View: ISBAL: Updated score panel.");
+                        //This is the event dispatch thread
+                        System.out.println("View: ISBAL: Going to send draw to opponent...");
+                        model.send((isB.y*dim) + isB.x); //something in [0,dim*dim-1]
+                        System.out.println("View: ISBAL: Sent draw to opponent.");
+                        System.out.println("View: ISBAL: Going to wait for opponent's draw...");
+                        waiting.setVisible(true);
+                    }else{
+                        phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
+                        //TODO: Not sure if it's a good idea to use the same logic for really undoing a move and in this situation
+                        model.undo();
+                    }
+                }else{
+                    //TODO Make another label / text field for these notifications
+                    phase.setText("That would be suicide!");
+                }
             }else{
                 phase.setText("Please choose an empty intersection!");
             }
