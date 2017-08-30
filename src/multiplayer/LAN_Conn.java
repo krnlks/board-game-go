@@ -13,9 +13,8 @@ import java.net.Socket;
  * @author Lukas Kern
  */
 public abstract class LAN_Conn extends Thread {
-    protected Model model;
-    public enum ROLE { SERVER, CLIENT };
-
+    Model model;
+    boolean isConnected = false;
     Socket socket;
     
     /**
@@ -49,7 +48,7 @@ public abstract class LAN_Conn extends Thread {
      * 
      * @throws IOException
      */
-    public abstract void init() throws Exception;
+    public abstract void init(String server_addr) throws IOException;
 
     /**
      * Closes the {@code socket}
@@ -57,6 +56,11 @@ public abstract class LAN_Conn extends Thread {
      * @throws IOException
      */
     public void terminate() throws IOException {
-        socket.close();
+        if (socket != null)
+            socket.close();
+    }
+
+    public boolean isConnected() {
+        return isConnected;
     }
 }

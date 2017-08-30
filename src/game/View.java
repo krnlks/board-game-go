@@ -244,42 +244,14 @@ public class View implements Observer{
         choose.setLayout(gl1);
         host = new JButton("Host (White)");
         conn_info_host = new JLabel("");
-        host.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-            	//TODO Remove dependency between player color (black/white) and LAN role (server/client). First choice: Host or join? Then: color? Also modify Model.setLAN_Role(). 
-                gameWindow.setTitle("Go - White");
-                //TODO Both for choosing host or join and (after that) choosing stone color: Make it possible to change decision
-                conn_info_host.setText("Waiting...");
-                model.setLANRole("");
-                if (model.estbl_LanConn() != 0){
-                	System.out.println("View: hostOrJoin: Starting server failed");
-                    System.exit(1);
-                }
-            }
-        });
+        host.addActionListener(new HostButtonActionListener());
         join = new JButton("Join (Black):");
         join.setHorizontalAlignment( SwingConstants.CENTER );
         server_addr = new JTextField();
         //TODO Outsource this address to development branch and create release with empty text field
         server_addr.setText("localhost");
         conn_info_client = new JLabel("");
-        ActionListener srvAddrList = new ActionListener() { //Create a listener for the server address
-            public void actionPerformed(ActionEvent e) {
-                gameWindow.setTitle("Go - Black");
-                model.setLANRole(server_addr.getText());
-                if (model.estbl_LanConn() == 0){
-                    System.out.println("View: hostOrJoin: estbl_LanConn() successful");
-                    choose.dispose();
-                    blackTurn = "My turn";
-                    updateScorePanel();
-                    whiteTurn = "White's turn";
-                    receive();
-                }else{
-                    server_addr.setText("");
-                    conn_info_client.setText("Invalid Host");
-                }
-            }
-        }; 
+        ActionListener srvAddrList = new ServerAddressListener();
         server_addr.addActionListener(srvAddrList); //Add the listener both to the text field containing the address
         join.addActionListener(srvAddrList); //and to the button
         jp1.add(host);
@@ -587,6 +559,37 @@ public class View implements Observer{
             }
         }//actionPerformed
     }//PassButtonActionListener
+    
+    private class HostButtonActionListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            if (model.setLANRole("") != 0){
+                System.out.println("View: hostOrJoin: Starting server failed");
+                return;
+            }
+            //TODO Remove dependency between player color (black/white) and LAN role (server/client). First choice: Host or join? Then: color? Also modify Model.setLAN_Role(). 
+            gameWindow.setTitle("Go - White");
+            //TODO Both for choosing host or join and (after that) choosing stone color: Make it possible to change decision
+            conn_info_host.setText("Waiting...");
+            conn_info_client.setText("");
+        }
+    }
+    
+    private class ServerAddressListener implements ActionListener{
+        public void actionPerformed(ActionEvent e) {
+            conn_info_host.setText("");
+            if (model.setLANRole(server_addr.getText()) == 0){
+                gameWindow.setTitle("Go - Black");
+                System.out.println("View: hostOrJoin: estbl_LanConn() successful");
+                choose.dispose();
+                blackTurn = "My turn";
+                updateScorePanel();
+                whiteTurn = "White's turn";
+                receive();
+            }else{
+                conn_info_client.setText("Invalid Host");
+            }
+        }
+    }
     
     private void displayResults(){
         String result;

@@ -4,6 +4,7 @@ import game.Model;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.SocketException;
 
 import javax.swing.SwingWorker;
 
@@ -28,6 +29,8 @@ public class Server extends LAN_Conn{
     public void run() {
         try {
             socket = serverSocket.accept();
+            isConnected = true;
+            System.out.println("The server (White)\n------------------\n");
             System.out.println("Server: Client connected!");
             //TODO Ouch
             model.setChanged1();
@@ -44,8 +47,10 @@ public class Server extends LAN_Conn{
             //Causes View#update and thus to waiting.setVisible(true)
             model.notifyObservers2(UpdateMessages.CLIENT_CONNECTED);
             System.out.println("Server: View notified");
-        } catch (IOException e1) {
-            e1.printStackTrace();
+        } catch (SocketException se) {
+            System.out.println("Socket closed");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }//run
 
@@ -54,16 +59,15 @@ public class Server extends LAN_Conn{
      * 
      * @throws IOException
      */
-    public void init() throws IOException {
-    	System.out.println("The server (White)\n------------------\n");
-    	serverSocket = new ServerSocket(SERVER_PORT);
+    public void init(String not_used) throws IOException {
+        serverSocket = new ServerSocket(SERVER_PORT);
     }
     
     /**
      * Closes the connection and the {@code socket}
      */
     public void terminate() throws IOException{
-        super.terminate();
         serverSocket.close();
+        super.terminate();
     }
 }

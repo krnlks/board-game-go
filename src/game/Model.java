@@ -161,39 +161,52 @@ public class Model extends Observable{
 	    isMyTurn = true;
 	}//receive
 	
-    /**
-     * Starts the {@link LAN_Conn} and thereby establishes the LAN connection 
-     * 
-     * @return 0 in case of success; -1 if an IOException has occurred
-     * and re-initialization is necessary
-     */
-    public int estbl_LanConn() {
-        try{
-            this.lan.init();
-            this.lan.start();
-            return 0;
-        }catch (Exception e) {
-            return -1;
-        }
-    }//estbl_LanConn   
 	
 	/**
-	 * Creates a {@link Server} or a {@link Client} depending on {@code server_address} and assigns it to {@code lan}. Also sets {@code player}
+	 * Creates a {@link Server} or a {@link Client} depending on whether 
+	 * {@code server_address} is an empty string or not 
+	 * and assigns it to {@code lan}. Also sets {@code player}.
 	 * 
 	 * @param server_address empty string if this shall be the server,
 	 * or the address of the remote server if this shall be the client
+	 * 
+	 * Also starts {@code lan} and thereby establishes the LAN connection 
+     * 
+     * @return 0 if the server/client was created successfully and,
+     * if this is the client, if it successfully connected to the server 
+     * <br> -1 if an IOException occurred
+     * <br> -2 if {@code lan} is already connected
+     * @see LAN_Conn
+     * @see Client
+     * @see Server
 	 */
-	public void setLANRole(String server_address){
-	    if (this.lan == null){
-	        if (server_address.equals("")){
-	            this.lan = new Server(this);
-	            this.player = Player.WHITE;
-	        }else{
-	            this.lan = new Client(this, server_address);
-	            this.player = Player.BLACK;
-	            isMyTurn = true;
-	        }
+	public int setLANRole(String server_address){
+	    if (this.lan != null){
+	        if (this.lan.isConnected())
+	            return -2;
+	        try {
+                lan.terminate();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 	    }
+	    
+        if (server_address.equals("")){
+            this.lan = new Server(this);
+            this.player = Player.WHITE;
+            isMyTurn = false;
+        }else{
+            this.lan = new Client(this);
+            this.player = Player.BLACK;
+            isMyTurn = true;
+        }
+        try{
+            this.lan.init(server_address); 
+            this.lan.start();
+            return 0;
+        }catch (IOException e) {
+            return -1;
+        }
 	}//setLAN_Role
 
     
