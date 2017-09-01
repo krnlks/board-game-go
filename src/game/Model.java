@@ -181,30 +181,26 @@ public class Model extends Observable{
      * @see Server
 	 */
 	public int setLANRole(String server_address){
-	    if (this.lan != null){
-	        if (this.lan.isConnected())
-	            return -2;
-	        try {
+	    try {
+            if (this.lan != null){
+                if (this.lan.isConnected())
+                    return -2;
                 lan.terminate();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-	    }
-	    
-        if (server_address.equals("")){
-            this.lan = new Server(this);
-            this.player = Player.WHITE;
-            isMyTurn = false;
-        }else{
-            this.lan = new Client(this);
-            this.player = Player.BLACK;
-            isMyTurn = true;
-        }
-        try{
+            
+            if (server_address.equals("")){
+                this.lan = new Server(this);
+                this.player = Player.WHITE;
+                isMyTurn = false;
+            }else{
+                this.lan = new Client(this);
+                this.player = Player.BLACK;
+                isMyTurn = true;
+            }
             this.lan.init(server_address); 
             this.lan.start();
             return 0;
-        }catch (IOException e) {
+        }catch (IOException e) { //from lan.terminate() or lan.init()
             return -1;
         }
 	}//setLAN_Role
@@ -440,8 +436,7 @@ public class Model extends Observable{
 	 * @see #hasGroupLiberty
 	 */
     public boolean isSuicide(int y, int x) {
-        int[][] mark = new int[dim][dim];                                       //Mark what we find
-        return !hasGroupLiberty(y, x, y, x, getCurrentPlayer(), mark);          //If the stone's group has a liberty, it isn't suicide
+        return !hasGroupLiberty(y, x, y, x, getCurrentPlayer(), new int[dim][dim]);
     }//isSuicide
     
 
