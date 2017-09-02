@@ -180,15 +180,15 @@ public class View implements Observer{
                 pris_W = new JLabel();
                 scr_B = new JLabel();
                 scr_W = new JLabel();
-                phase = new JLabel(blackTurn);
+                phase = new JLabel(blackTurn, SwingConstants.CENTER);
                 pass = new JButton("Pass");
                 pass.addActionListener( new PassButtonActionListener() );
 //                undo = new JButton("Undo");
 //                undo.addActionListener( new UndoButtonActionListener() );
             
             scorePanel.add(new JLabel());           //Upper left corner of the scorePanel is empty
-            Font font = new Font(new JLabel().getFont().getFontName(), Font.BOLD, 16);
             JLabel black = new JLabel("Black"); 
+            Font font = new Font(black.getFont().getFontName(), Font.BOLD, 16);
             black.setFont(font);
             scorePanel.add(black);
             
@@ -514,6 +514,8 @@ public class View implements Observer{
                 return;
             }
             ISButton isB = (ISButton) e.getSource();
+            String start = "<html><font color='green'><b>";
+            String end = "</b></font></html>";
             if (model.isEmptyIntersection(isB.y, isB.x)){
         		Model.MoveReturn mr = model.processMove(isB.y, isB.x); 
         		if (mr.equals(Model.MoveReturn.OK)){
@@ -529,12 +531,18 @@ public class View implements Observer{
     				waiting.setVisible(true);
         		}else if (mr.equals(Model.MoveReturn.KO)){
         			//TODO Make another label / text field for these notifications
-        			phase.setText("A stone that struck an opposing stone cannot be struck right afterwards!");
+        		    phase.setText(start
+        		            + "A stone that struck an<br>"
+        		            + "opposing stone cannot be<br>"
+        		            + "struck right afterwards"
+        		            + end);
         		}else if (mr.equals(Model.MoveReturn.SUICIDE)){
-        			phase.setText("That would be suicide!");
+        			phase.setText(start + "That would be suicide"
+        			        + end);
         		}
             }else{
-                phase.setText("Please choose an empty intersection!");
+                phase.setText(start + "Please choose an<br>"
+                        + "empty intersection" + end);
             }
         }//actionPerformed
     }//ISButtonActionListener
