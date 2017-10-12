@@ -489,9 +489,13 @@ public class View implements Observer{
 
     private class GameWindowListener implements WindowListener{
         public void windowClosing(WindowEvent e) {
-            if (!model.isGameOver()) //if opponent still there
-                model.send(Constants.SEND_QUIT);
-            gameWindow.dispose();
+            switch (JOptionPane.showConfirmDialog(gameWindow, "Are you sure that you want to quit?", "", JOptionPane.YES_NO_OPTION)){
+                case JOptionPane.YES_OPTION:
+                    if (!model.isGameOver()) //if opponent still there
+                        model.send(Constants.SEND_QUIT);
+                    gameWindow.dispose();
+                    break;
+            }
         }
         public void windowActivated(WindowEvent e) {
         }
