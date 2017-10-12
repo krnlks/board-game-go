@@ -67,7 +67,8 @@ public class Server extends LAN_Conn{
      * Closes the connection and the {@code socket}
      */
     public void terminate() throws IOException{
-        serverSocket.close();
+    	if (serverSocket != null)
+    		serverSocket.close();
         super.terminate();
     }
 }
